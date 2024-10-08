@@ -82,7 +82,7 @@ export const Item = ({
         if (!expanded) {
           onExpand?.();
         }
-        router.push(`/documents/${documentId}`);
+        // router.push(`/documents/${documentId}`);
       },
     );
 
@@ -170,7 +170,7 @@ Item.Skeleton = function ItemSkeleton({ level }: { level?: number }) {
   return (
     <div
       style={{ paddingLeft: level ? `${level * 12 + 25}px` : "12px" }}
-      className="flex gap-x-2 py-[.1875rem]"
+      className="flex gap-x-2 py-[3px]"
     >
       <Skeleton className="h-4 w-4" />
       <Skeleton className="h-4 w-[30%]" />
