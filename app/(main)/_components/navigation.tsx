@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronsLeft, MenuIcon, PlusCircle, Search, Settings } from "lucide-react";
+import {
+  ChevronsLeft,
+  Trash,
+  MenuIcon,
+  PlusCircle,
+  Search,
+  Settings,
+} from "lucide-react";
 import { ElementRef, useRef, useState, useEffect } from "react";
 import { useMediaQuery } from "usehooks-ts";
 import { usePathname } from "next/navigation";
@@ -9,10 +16,16 @@ import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { api } from "@/convex/_generated/api";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 
 import { UserItem } from "./user-item";
 import { Item } from "./item";
 import { DocumentList } from "./document-list";
+import { TrashBox } from "./trash-box";
 
 export const Navigation = () => {
   const pathname = usePathname();
@@ -40,7 +53,7 @@ export const Navigation = () => {
   }, [pathname, isMobile]);
 
   const handleMouseDown = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     event.preventDefault();
     event.stopPropagation();
@@ -62,7 +75,7 @@ export const Navigation = () => {
       navbarRef.current.style.setProperty("left", `${newWidth}px`);
       navbarRef.current.style.setProperty(
         "width",
-        `calc(100% - ${newWidth}px)`,
+        `calc(100% - ${newWidth}px)`
       );
     }
   };
@@ -82,13 +95,12 @@ export const Navigation = () => {
       navbarRef.current.style.removeProperty("width");
       navbarRef.current.style.setProperty(
         "width",
-        isMobile ? "0" : "calc(100%-240px)",
+        isMobile ? "0" : "calc(100%-240px)"
       );
       navbarRef.current.style.setProperty("left", isMobile ? "100%" : "240px");
       setTimeout(() => setIsResetting(false), 300);
     }
   };
-
 
   const collapse = () => {
     if (sidebarRef.current && navbarRef.current) {
@@ -110,7 +122,7 @@ export const Navigation = () => {
       success: "Document created",
       error: "Failed to create document",
     });
-  }
+  };
 
   return (
     <>
@@ -136,27 +148,30 @@ export const Navigation = () => {
         </div>
         <div>
           <UserItem />
-          <Item 
-            label="Search"
-            icon={Search}
-            isSearch
-            onClick={() => {}}
-          />
-          <Item 
-            label="Settings"
-            icon={Settings}
-            onClick={() => {}}
-          />
-          <Item
-            onClick={handleCreate}
-            label="New Document"
-            icon={PlusCircle}
-          />
+          <Item label="Search" icon={Search} isSearch onClick={() => {}} />
+          <Item label="Settings" icon={Settings} onClick={() => {}} />
+          <Item onClick={handleCreate} label="New Document" icon={PlusCircle} />
         </div>
         <div className="mt-4">
           <DocumentList />
+          <Item
+            onClick={handleCreate}
+            label="Add a new document"
+            icon={PlusCircle}
+          />
+          <Popover>
+            <PopoverTrigger className="w-full mt-4">
+              <Item label="Trash" icon={Trash} />
+            </PopoverTrigger>
+            <PopoverContent
+              className="p-0 w-72"
+              side={isMobile ? "bottom" : "right"}
+            >
+              <TrashBox />
+            </PopoverContent>
+          </Popover>
         </div>
-        <div 
+        <div
           onMouseDown={handleMouseDown}
           onClick={resetWidth}
           className="opacity-0 group-hover/sidebar:opacity-100
@@ -173,8 +188,14 @@ export const Navigation = () => {
         )}
       >
         <nav className="bg-transparent px-3 py-2 w-full">
-          {isCollapsed && <MenuIcon onClick={resetWidth} role="button" className="h-6 w-6
-          text-muted-foreground" />}
+          {isCollapsed && (
+            <MenuIcon
+              onClick={resetWidth}
+              role="button"
+              className="h-6 w-6
+          text-muted-foreground"
+            />
+          )}
         </nav>
       </div>
     </>
