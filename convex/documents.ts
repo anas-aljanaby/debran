@@ -239,9 +239,9 @@ export const getById = query({
       throw new Error("Document not found");
     }
 
-    if (!document.isArchived) {
-      return document;
-    }
+    // if (!document.isArchived) {
+    //   return document;
+    // }
 
     if (!identity) {
       throw new Error("Not authenticated");
@@ -264,7 +264,7 @@ export const update = mutation({
     content: v.optional(v.string()),
     coverImage: v.optional(v.string()),
     icon: v.optional(v.string()),
-    isPublished: v.optional(v.boolean()),
+    // isPublished: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
