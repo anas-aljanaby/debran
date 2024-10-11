@@ -1,12 +1,80 @@
 "use client";
-
-import { BlockNoteEditor, PartialBlock } from "@blocknote/core";
-import { useCreateBlockNote } from "@blocknote/react";
+import { useState } from 'react';
 import { BlockNoteView } from "@blocknote/mantine";
 import { useTheme } from "next-themes";
 import { useEdgeStore } from "@/lib/edgestore";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
+import { HiOutlineGlobeAlt } from "react-icons/hi";
+import {
+  BlockNoteEditor,
+  filterSuggestionItems,
+  PartialBlock,
+} from "@blocknote/core";
+import "@blocknote/core/fonts/inter.css";
+import {
+  DefaultReactSuggestionItem,
+  getDefaultReactSlashMenuItems,
+  SuggestionMenuController,
+  useCreateBlockNote,
+} from "@blocknote/react";
+
+function extractTextFromBlock(block: PartialBlock): string {
+  let extractedText = '';
+  if (block && block.content && Array.isArray(block.content)) {
+    block.content.forEach(item => {
+      if (item.text) {
+        extractedText += item.text + ' ';
+      }
+    });
+  }
+  return extractedText.trim();
+}
+
+const finishParagraphItem = (editor: BlockNoteEditor, context: string) => ({
+  title: "Finish Paragraph",
+  onItemClick: async () => {
+    const currentBlock = editor.getTextCursorPosition().block;
+    console.log("Current block:", currentBlock);
+    
+    const text = extractTextFromBlock(currentBlock);
+    
+    try {
+      const response = await fetch('/api/llm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text, context }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get completion');
+      }
+
+      const data = await response.json();
+      const completion = data.completion;
+
+      editor.updateBlock(currentBlock, { content: text + completion });
+      editor.setTextCursorPosition(currentBlock, "end");
+    } catch (error) {
+      console.error('Error getting completion:', error);
+      // Handle error (e.g., show a notification to the user)
+    }
+  },
+  aliases: ["finish"],
+  group: "AI",
+  icon: <HiOutlineGlobeAlt size={18} />,
+  subtext: "Complete the paragraph using AI",
+});
+
+const getCustomSlashMenuItems = (
+  editor: BlockNoteEditor,
+  context: string
+): DefaultReactSuggestionItem[] => [
+  ...getDefaultReactSlashMenuItems(editor),
+  finishParagraphItem(editor, context),
+];
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -16,18 +84,15 @@ interface EditorProps {
 
 const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   const { resolvedTheme } = useTheme();
-
   const { edgestore } = useEdgeStore();
+  const [context, setContext] = useState('');
 
   const handleUpload = async (file: File) => {
     const res = await edgestore.publicFiles.upload({
       file,
     });
-
     return res.url;
   };
-
-  console.log(initialContent);
 
   const editor: BlockNoteEditor = useCreateBlockNote({
     initialContent: initialContent
@@ -47,7 +112,15 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         editor={editor}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         onChange={handleEditorChange}
-      />
+        slashMenu={false}
+      >
+        <SuggestionMenuController
+          triggerCharacter={"/"}
+          getItems={async (query) =>
+            filterSuggestionItems(getCustomSlashMenuItems(editor, context), query)
+          }
+        />
+      </BlockNoteView>
     </div>
   );
 };
