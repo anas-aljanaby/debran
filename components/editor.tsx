@@ -9,6 +9,7 @@ import { HiOutlineGlobeAlt } from "react-icons/hi";
 import {
   BlockNoteEditor,
   filterSuggestionItems,
+  InlineContent,
   PartialBlock,
 } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
@@ -30,6 +31,7 @@ function extractTextFromBlock(block: PartialBlock): string {
   }
   return extractedText.trim();
 }
+
 
 const finishParagraphItem = (editor: BlockNoteEditor, context: string) => ({
   title: "Finish Paragraph",
@@ -55,7 +57,26 @@ const finishParagraphItem = (editor: BlockNoteEditor, context: string) => ({
       const data = await response.json();
       const completion = data.completion;
 
-      editor.updateBlock(currentBlock, { content: text + completion });
+      // Create a new inline content item for the AI-generated text
+      const aiSuggestion: InlineContent<any, any> = {
+        type: "text",
+        text: completion,
+        styles: {
+          textColor: "gray",
+        },
+      };
+
+      // Get the current content of the block
+      const currentContent = currentBlock.content as InlineContent<any, any>[];
+
+      // Append the AI suggestion to the current content
+      const updatedContent = [...currentContent, aiSuggestion];
+
+      // Update the block with the new content
+      editor.updateBlock(currentBlock, {
+        content: updatedContent,
+      });
+
       editor.setTextCursorPosition(currentBlock, "end");
     } catch (error) {
       console.error('Error getting completion:', error);
@@ -67,6 +88,7 @@ const finishParagraphItem = (editor: BlockNoteEditor, context: string) => ({
   icon: <HiOutlineGlobeAlt size={18} />,
   subtext: "Complete the paragraph using AI",
 });
+
 
 const getCustomSlashMenuItems = (
   editor: BlockNoteEditor,
