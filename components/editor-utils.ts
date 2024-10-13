@@ -31,8 +31,3 @@ if (blockElement) {
 }
 };
 
-export const handleUpload = async (file: File, edgestore: any) => {
-  const res = await edgestore.publicFiles.upload({ file });
-  return res.url;
-};
-
