@@ -11,7 +11,7 @@ import { EdgeStoreProvider } from "@/lib/edgestore";
 const inter = Inter({subsets: ["latin"]});
 
 export const metadata: Metadata = {
-  title: "Jotion",
+  title: "Debran",
   description: "Edit notes",
   icons: {
     icon: [

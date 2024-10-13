@@ -11,7 +11,7 @@ export const handleUpload = async (edgestore: EdgeStore) => {
   };
 };
 
-export async function handleFinishParagraph(
+export async function handleContinueWriting(
     editor: BlockNoteEditor,
     currentBlock: PartialBlock,
     userInput: string,
