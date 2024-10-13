@@ -9,7 +9,6 @@ import { HiOutlineGlobeAlt } from "react-icons/hi";
 import {
   BlockNoteEditor,
   filterSuggestionItems,
-  InlineContent,
   PartialBlock,
 } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
@@ -19,11 +18,10 @@ import {
   SuggestionMenuController,
   useCreateBlockNote,
 } from "@blocknote/react";
-import TextareaAutosize from "react-textarea-autosize";
-
 import { useEffect, useRef } from 'react';
 
-import { extractTextFromBlock, setDynamicPosition } from './editor-utils';
+import { setDynamicPosition } from './editor-utils';
+import { handleUpload, handleFinishParagraph } from './editorHandlers';
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -48,34 +46,14 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     left: 0,
   });
 
-  // Effect to handle clicks outside of the text window
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (textWindowRef.current && !textWindowRef.current.contains(event.target as Node)) {
-        handleFinishParagraph();  // Call the function to finish paragraph
-        setShowTextWindow(false); // Close the text window
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [textWindowRef, userInput]);
-
-  const handleUpload = async (file: File) => {
-    const res = await edgestore.publicFiles.upload({
-      file,
-    });
-    return res.url;
-  };
-
   const editor: BlockNoteEditor = useCreateBlockNote({
     initialContent: initialContent
       ? (JSON.parse(initialContent) as PartialBlock[])
       : undefined,
-    uploadFile: handleUpload,
+    uploadFile: async (file) => {
+      const uploader = await handleUpload(edgestore);
+      return uploader(file);
+    },
   });
 
   const handleEditorChange = () => {
@@ -98,53 +76,28 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     subtext: "Complete the paragraph using AI after adding text",
   });
 
-  // Define function to handle finishing paragraph after user input
-  const handleFinishParagraph = async () => {
-    const currentBlock = textWindowBlock;
-
-    if (!currentBlock) return;
-
-    const userEnteredText = userInput; // Text from the input area
-    const extractedText = extractTextFromBlock(currentBlock);
-
-    const combinedText = `${extractedText} ${userEnteredText}`;
-
-    try {
-      const response = await fetch('/api/llm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: combinedText, context }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get completion');
-      }
-
-      const data = await response.json();
-      const completion = data.completion;
-
-      const aiSuggestion: InlineContent<any, any> = {
-        type: "text",
-        text: completion,
-        styles: {
-          textColor: "gray",
-        },
-      };
-
-      const currentContent = currentBlock.content as InlineContent<any, any>[];
-      const updatedContent = [...currentContent, aiSuggestion];
-
-      editor.updateBlock(currentBlock, {
-        content: updatedContent,
-      });
-
-      editor.setTextCursorPosition(currentBlock, "end");
-    } catch (error) {
-      console.error('Error getting completion:', error);
+  const handleFinishParagraphWrapper = async () => {
+    if (textWindowBlock) {
+      await handleFinishParagraph(editor, textWindowBlock, userInput, context);
+      setShowTextWindow(false);
+      setUserInput('');
     }
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (textWindowRef.current && !textWindowRef.current.contains(event.target as Node)) {
+        handleFinishParagraphWrapper();
+        setShowTextWindow(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [textWindowRef, userInput, editor, textWindowBlock, context]);
 
   const getCustomSlashMenuItems = (
     editor: BlockNoteEditor,
@@ -203,8 +156,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
             }}
             onKeyPress={(e) => {
               if (e.key === "Enter") {
-                handleFinishParagraph(); // Finish paragraph on pressing enter
-                setShowTextWindow(false); // Hide the text window
+                handleFinishParagraphWrapper();
               }
             }}
           />
