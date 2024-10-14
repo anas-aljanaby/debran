@@ -42,7 +42,7 @@ export async function handleContinueWriting(
         type: "text",
         text: completion,
         styles: {
-          textColor: "gray",
+          textColor: "#[1F1F1F]",
         },
       };
   

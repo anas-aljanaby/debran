@@ -52,9 +52,9 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
   return (
     <div
       ref={windowRef}
-      className="absolute z-[1000] p-4 bg-white
-      dark:bg-[#1F1F1F] border border-gray-500
-      dark:border-gray-200 rounded-lg shadow-lg w-2/5"
+      className="absolute z-[1000] p-4 bg-white 
+      dark:bg-[#1F1F1F] border  border-gray-500 backdrop-blur-md
+      dark:border-gray-300 rounded-lg shadow-2xl dark:shadow-2xl w-2/5"
       style={{
         top: position.top,
         left: position.left,
@@ -67,7 +67,7 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
         onChange={(e) => setUserInput(e.target.value)}
         placeholder="Give instructions to the AI how to continue..."
         className="w-full text-md border-none focus:ring-0 focus:outline-none
-        bg-transparent text-gray-400 placeholder:text-gray-400"
+        bg-transparent text-gray-600 placeholder:text-gray-400 dark:placeholder:text-[#575757]"
 
         style={{
             boxShadow: "none",
@@ -75,7 +75,7 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
         }}
         onKeyDown={onKeyDown}
       />
-      <div className="mt-2 text-sm text-gray-400 dark:text-gray-400">
+      <div className="mt-2 text-sm text-gray-400 dark:text-[#575757]">
         Enter to confirm, Esc to close
       </div>
     </div>
