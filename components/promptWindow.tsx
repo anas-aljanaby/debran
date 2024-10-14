@@ -1,6 +1,10 @@
 import React, { useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 
+
+//TODO: add x button to close the prompt window
+//TODO: Style the prompt window for clear visibility, for dark and light mode
+
 interface PromptWindowProps {
   showWindow: boolean;
   position: { top: number; left: number };
@@ -48,10 +52,13 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
   return (
     <div
       ref={windowRef}
-      className="absolute z-[1000] p-4 bg-white dark:bg-[#1F1F1F] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg w-80 sm:w-96 md:w-112 lg:w-128"
+      className="absolute z-[1000] p-4 bg-white
+      dark:bg-[#1F1F1F] border border-gray-500
+      dark:border-gray-200 rounded-lg shadow-lg w-2/5"
       style={{
         top: position.top,
         left: position.left,
+        height: "80px",
       }}
     >
       <Input
@@ -59,9 +66,18 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
         value={userInput}
         onChange={(e) => setUserInput(e.target.value)}
         placeholder="Give instructions to the AI how to continue..."
-        className="w-full text-sm border-none focus:ring-0 outline-none"
+        className="w-full text-md border-none focus:ring-0 focus:outline-none
+        bg-transparent text-gray-400 placeholder:text-gray-400"
+
+        style={{
+            boxShadow: "none",
+            height: "30px",
+        }}
         onKeyDown={onKeyDown}
       />
+      <div className="mt-2 text-sm text-gray-400 dark:text-gray-400">
+        Enter to confirm, Esc to close
+      </div>
     </div>
   );
 };
