@@ -15,7 +15,7 @@ import { SuggestionMenuController, useCreateBlockNote } from "@blocknote/react";
 import { setDynamicPosition } from "./editor-utils";
 import { handleUpload, handleContinueWriting } from "./editorHandlers";
 import { getCustomSlashMenuItems } from "./editorMenuItems";
-import { Input } from "@/components/ui/input";
+import PromptWindow from './promptWindow';
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -45,9 +45,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     left: 0,
   });
 
-  // Add a new ref for the input element
-  const inputRef = useRef<HTMLInputElement>(null);
-
   const editor: BlockNoteEditor = useCreateBlockNote({
     initialContent: initialContent
       ? (JSON.parse(initialContent) as PartialBlock[])
@@ -63,6 +60,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       setShowTextWindow(false);
     } else if (e.key === "Enter") {
       handleContinueWritingWrapper();
+      setShowTextWindow(false);
     }
   };
 
@@ -77,30 +75,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       setUserInput("");
     }
   };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        textWindowRef.current &&
-        !textWindowRef.current.contains(event.target as Node)
-      ) {
-        setShowTextWindow(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [textWindowRef]);
-
-  // Focus on the input when the text window is shown
-  useEffect(() => {
-    if (showTextWindow && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [showTextWindow]);
 
   return (
     <div>
@@ -129,26 +103,14 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         />
       </BlockNoteView>
 
-      {/* Conditionally render the text window with a textarea */}
-      {showTextWindow && textWindowBlock && (
-        <div
-          ref={textWindowRef}
-          className="absolute z-[1000] p-4 bg-white dark:bg-[#1F1F1F] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg w-80 sm:w-96 md:w-112 lg:w-128"
-          style={{
-            top: textWindowPosition.top,
-            left: textWindowPosition.left,
-          }}
-        >
-          <Input
-            ref={inputRef}
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Give instructions to the AI how to continue..."
-            className="w-full text-sm border-none focus:ring-0 outline-none"
-            onKeyDown={handleKeyDown}
-          />
-        </div>
-      )}
+      <PromptWindow
+        showWindow={showTextWindow}
+        position={textWindowPosition}
+        userInput={userInput}
+        setUserInput={setUserInput}
+        onKeyDown={handleKeyDown}
+        onClickOutside={() => setShowTextWindow(false)}
+      />
     </div>
   );
 };
