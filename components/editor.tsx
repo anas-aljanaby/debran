@@ -13,7 +13,12 @@ import {
 import "@blocknote/core/fonts/inter.css";
 import { SuggestionMenuController, useCreateBlockNote } from "@blocknote/react";
 import { setDynamicPosition } from "./editor-utils";
-import { handleUpload, handleContinueWriting } from "./editorHandlers";
+import {
+  handleUpload,
+  handleContinueWriting,
+  handleEditorChange,
+  handleKeyDown,
+} from "./editorHandlers";
 import { getCustomSlashMenuItems } from "./editorMenuItems";
 import PromptWindow from './promptWindow';
 
@@ -27,16 +32,12 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   const { resolvedTheme } = useTheme();
   const { edgestore } = useEdgeStore();
   const [context, setContext] = useState("");
-
-  // State and ref for the text window
   const [showTextWindow, setShowTextWindow] = useState(false);
   const [textWindowBlock, setTextWindowBlock] = useState<PartialBlock | null>(
     null
   );
   const textWindowRef = useRef<HTMLDivElement>(null);
   const [userInput, setUserInput] = useState(""); // State to capture the user's input in the text area
-
-  // Position state for the text window
   const [textWindowPosition, setTextWindowPosition] = useState<{
     top: number;
     left: number;
@@ -55,19 +56,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     },
   });
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      setShowTextWindow(false);
-    } else if (e.key === "Enter") {
-      handleContinueWritingWrapper();
-      setShowTextWindow(false);
-    }
-  };
-
-  const handleEditorChange = () => {
-    onChange(JSON.stringify(editor.document, null, 2));
-  };
-
   const handleContinueWritingWrapper = async () => {
     if (textWindowBlock) {
       await handleContinueWriting(editor, textWindowBlock, userInput, context);
@@ -82,7 +70,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         editable={editable}
         editor={editor}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
-        onChange={handleEditorChange}
+        onChange={() => handleEditorChange(editor, onChange)}
         slashMenu={false}
       >
         <SuggestionMenuController
@@ -108,7 +96,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         position={textWindowPosition}
         userInput={userInput}
         setUserInput={setUserInput}
-        onKeyDown={handleKeyDown}
+        onKeyDown={(e) => handleKeyDown(e, setShowTextWindow, handleContinueWritingWrapper)}
         onClickOutside={() => setShowTextWindow(false)}
       />
     </div>

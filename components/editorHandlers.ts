@@ -58,3 +58,23 @@ export async function handleContinueWriting(
       console.error('Error getting completion:', error);
     }
   }
+
+export const handleEditorChange = (
+  editor: BlockNoteEditor,
+  onChange: (value: string) => void
+) => {
+  onChange(JSON.stringify(editor.document, null, 2));
+};
+
+export const handleKeyDown = (
+  e: React.KeyboardEvent<HTMLInputElement>,
+  setShowTextWindow: (show: boolean) => void,
+  handleContinueWritingWrapper: () => Promise<void>
+) => {
+  if (e.key === "Escape") {
+    setShowTextWindow(false);
+  } else if (e.key === "Enter") {
+    handleContinueWritingWrapper();
+    setShowTextWindow(false);
+  }
+};
