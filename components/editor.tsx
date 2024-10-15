@@ -21,6 +21,9 @@ import {
 } from "./editorHandlers";
 import { getCustomSlashMenuItems } from "./editorMenuItems";
 import PromptWindow from './promptWindow';
+import { CustomToolbar } from './custom-toolbar';
+import { FormattingToolbarController } from "@blocknote/react";
+import { PromptButton } from './prompt-button';
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -72,7 +75,11 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         onChange={() => handleEditorChange(editor, onChange)}
         slashMenu={false}
+        formattingToolbar={false}
       >
+      <FormattingToolbarController 
+        formattingToolbar={() => <CustomToolbar customButton={<PromptButton />} />} 
+      />
         <SuggestionMenuController
           triggerCharacter={"/"}
           getItems={async (query) =>
