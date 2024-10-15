@@ -67,7 +67,7 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
         onChange={(e) => setUserInput(e.target.value)}
         placeholder="Give instructions to the AI how to continue..."
         className="w-full text-md border-none focus:ring-0 focus:outline-none
-        bg-transparent text-gray-600 placeholder:text-gray-400 dark:placeholder:text-[#575757]"
+        bg-transparent text-gray-600 dark:text-[#CFCFCF] placeholder:text-gray-400 dark:placeholder:text-[#575757]"
 
         style={{
             boxShadow: "none",
