@@ -20,7 +20,7 @@ import {
 } from "@blocknote/react";
 
 import { setDynamicPosition } from "./editor-utils";
-import { handleUpload, handleContinueWriting } from "./editor-handlers";
+import { handleUpload, createHandleKeyDown, handleContinueWritingWrapper } from "./editor-handlers";
 import { getCustomSlashMenuItems } from "./editor-menu-items";
 import PromptWindow from "./promptWindow";
 import CustomToolbar from "./custom-toolbar";
@@ -72,27 +72,9 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     },
   });
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      setShowTextWindow(false);
-      setShowHighlightWindow(false); // Close the highlight window on escape
-    } else if (e.key === "Enter") {
-      handleContinueWritingWrapper();
-      setShowTextWindow(false);
-      setShowHighlightWindow(false); // Close the highlight window on enter
-    }
-  };
 
   const handleEditorChange = () => {
     onChange(JSON.stringify(editor.document, null, 2));
-  };
-
-  const handleContinueWritingWrapper = async () => {
-    if (textWindowBlock) {
-      await handleContinueWriting(editor, textWindowBlock, userInput, context);
-      setShowTextWindow(false);
-      setUserInput("");
-    }
   };
 
   const handleSelection = () => {
@@ -112,6 +94,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       setShowHighlightWindow(false);
     }
   };
+
   useEffect(() => {
     if (showHighlightWindow && savedSelection) {
       const selection = window.getSelection();
@@ -121,6 +104,12 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       }
     }
   }, [showHighlightWindow, savedSelection]);
+
+  const handleKeyDown = createHandleKeyDown(
+    () => handleContinueWritingWrapper(editor, textWindowBlock, userInput, context, setShowTextWindow, setUserInput),
+    setShowTextWindow,
+    setShowHighlightWindow
+  );
 
   return (
     <div>

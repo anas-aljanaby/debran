@@ -1,6 +1,7 @@
 import { BlockNoteEditor, InlineContent, PartialBlock } from "@blocknote/core";
 import { EdgeStore } from "@/lib/edgestore";
 import { extractTextFromBlock } from './editor-utils';
+import { KeyboardEvent } from "react";
 
 export const handleUpload = async (edgestore: EdgeStore) => {
   return async (file: File) => {
@@ -59,6 +60,38 @@ export async function handleContinueWriting(
     }
   }
 
+export function createHandleKeyDown(
+  handleContinueWritingWrapper: () => Promise<void>,
+  setShowTextWindow: (value: boolean) => void,
+  setShowHighlightWindow: (value: boolean) => void
+) {
+  return (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setShowTextWindow(false);
+      setShowHighlightWindow(false); // Close the highlight window on escape
+    } else if (e.key === "Enter") {
+      handleContinueWritingWrapper();
+      setShowTextWindow(false);
+      setShowHighlightWindow(false); // Close the highlight window on enter
+    }
+  };
+}
+
+export async function handleContinueWritingWrapper(
+  editor: BlockNoteEditor,
+  currentBlock: PartialBlock | null,
+  userInput: string,
+  context: string,
+  setShowTextWindow: (value: boolean) => void,
+  setUserInput: (value: string) => void
+) {
+  if (currentBlock) {
+    await handleContinueWriting(editor, currentBlock, userInput, context);
+    setShowTextWindow(false);
+    setUserInput("");
+  }
+}
+
 export const handleEditorChange = (
   editor: BlockNoteEditor,
   onChange: (value: string) => void
@@ -67,14 +100,17 @@ export const handleEditorChange = (
 };
 
 export const handleKeyDown = (
-  e: React.KeyboardEvent<HTMLInputElement>,
+  e: KeyboardEvent<HTMLInputElement>,
   setShowTextWindow: (show: boolean) => void,
+  setShowHighlightWindow: (show: boolean) => void,
   handleContinueWritingWrapper: () => Promise<void>
 ) => {
   if (e.key === "Escape") {
     setShowTextWindow(false);
+    setShowHighlightWindow(false); // Close the highlight window on escape
   } else if (e.key === "Enter") {
     handleContinueWritingWrapper();
     setShowTextWindow(false);
+    setShowHighlightWindow(false); // Close the highlight window on enter
   }
 };
