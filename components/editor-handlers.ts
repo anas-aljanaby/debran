@@ -92,25 +92,28 @@ export async function handleContinueWritingWrapper(
   }
 }
 
-export const handleEditorChange = (
-  editor: BlockNoteEditor,
-  onChange: (value: string) => void
-) => {
+export function handleEditorChange(editor: BlockNoteEditor, onChange: (value: string) => void) {
   onChange(JSON.stringify(editor.document, null, 2));
-};
+}
 
-export const handleKeyDown = (
-  e: KeyboardEvent<HTMLInputElement>,
-  setShowTextWindow: (show: boolean) => void,
-  setShowHighlightWindow: (show: boolean) => void,
-  handleContinueWritingWrapper: () => Promise<void>
-) => {
-  if (e.key === "Escape") {
-    setShowTextWindow(false);
-    setShowHighlightWindow(false); // Close the highlight window on escape
-  } else if (e.key === "Enter") {
-    handleContinueWritingWrapper();
-    setShowTextWindow(false);
-    setShowHighlightWindow(false); // Close the highlight window on enter
+export function handleSelection(
+  setSavedSelection: (range: Range) => void,
+  setHighlightPosition: (position: { top: number; left: number }) => void,
+  setShowHighlightWindow: (value: boolean) => void
+) {
+  const selection = window.getSelection();
+  
+  if (selection && selection.toString().trim() !== "") {
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    setSavedSelection(range);
+    setHighlightPosition({
+      top: rect.top + window.scrollY + rect.height + 30, // Position below the selected text
+      left: rect.left + window.scrollX,
+    });
+    setShowHighlightWindow(true);
+  } else {
+    setShowHighlightWindow(false);
   }
-};
+}

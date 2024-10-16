@@ -20,7 +20,13 @@ import {
 } from "@blocknote/react";
 
 import { setDynamicPosition } from "./editor-utils";
-import { handleUpload, createHandleKeyDown, handleContinueWritingWrapper } from "./editor-handlers";
+import {
+  handleUpload, 
+  createHandleKeyDown, 
+  handleContinueWritingWrapper,
+  handleEditorChange,
+  handleSelection
+ } from "./editor-handlers";
 import { getCustomSlashMenuItems } from "./editor-menu-items";
 import PromptWindow from "./promptWindow";
 import CustomToolbar from "./custom-toolbar";
@@ -72,27 +78,12 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     },
   });
 
-
-  const handleEditorChange = () => {
-    onChange(JSON.stringify(editor.document, null, 2));
+  const handleEditorChangeWrapper = () => {
+    handleEditorChange(editor, onChange);
   };
-
-  const handleSelection = () => {
-    const selection = window.getSelection();
-    if (selection && selection.toString().trim() !== "") {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      console.log(selection.toString());
-
-      setSavedSelection(range);
-      setHighlightPosition({
-        top: rect.top + window.scrollY + rect.height + 30, // Position below the selected text
-        left: rect.left + window.scrollX,
-      });
-      setShowHighlightWindow(true);
-    } else {
-      setShowHighlightWindow(false);
-    }
+  
+  const handleSelectionWrapper = () => {
+    handleSelection(setSavedSelection, setHighlightPosition, setShowHighlightWindow);
   };
 
   useEffect(() => {
@@ -117,13 +108,13 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         editable={editable}
         editor={editor}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
-        onChange={handleEditorChange}
+        onChange={handleEditorChangeWrapper}
         slashMenu={false}
         formattingToolbar={false}
       >
         <FormattingToolbarController
           formattingToolbar={() => (
-            <CustomToolbar handleSelection={handleSelection} />
+            <CustomToolbar handleSelection={handleSelectionWrapper} />
           )}
         />
         <SuggestionMenuController
