@@ -113,7 +113,5 @@ export function handleSelection(
       left: rect.left + window.scrollX,
     });
     setShowHighlightWindow(true);
-  } else {
-    setShowHighlightWindow(false);
   }
 }

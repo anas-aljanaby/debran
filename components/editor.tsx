@@ -41,12 +41,10 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   const { resolvedTheme } = useTheme();
   const { edgestore } = useEdgeStore();
   const [context, setContext] = useState("");
-  const components = useComponentsContext()!;
   const [showTextWindow, setShowTextWindow] = useState(false);
   const [textWindowBlock, setTextWindowBlock] = useState<PartialBlock | null>(
     null
   );
-  const textWindowRef = useRef<HTMLDivElement>(null);
   const [userInput, setUserInput] = useState(""); // State to capture the user's input in the text area
 
   const [textWindowPosition, setTextWindowPosition] = useState<{
@@ -66,8 +64,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     left: 0,
   });
 
-  const [savedSelection, setSavedSelection] = useState<Range | null>(null); // To save the selection
-
   const editor: BlockNoteEditor = useCreateBlockNote({
     initialContent: initialContent
       ? (JSON.parse(initialContent) as PartialBlock[])
@@ -82,20 +78,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     handleEditorChange(editor, onChange);
   };
   
-  const handleSelectionWrapper = () => {
-    handleSelection(setSavedSelection, setHighlightPosition, setShowHighlightWindow);
-  };
-
-  useEffect(() => {
-    if (showHighlightWindow && savedSelection) {
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(savedSelection); // Restore saved selection
-      }
-    }
-  }, [showHighlightWindow, savedSelection]);
-
   const handleKeyDown = createHandleKeyDown(
     () => handleContinueWritingWrapper(editor, textWindowBlock, userInput, context, setShowTextWindow, setUserInput),
     setShowTextWindow,
@@ -114,7 +96,11 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       >
         <FormattingToolbarController
           formattingToolbar={() => (
-            <CustomToolbar handleSelection={handleSelectionWrapper} />
+            <CustomToolbar
+              setHighlightPosition={setHighlightPosition}
+              setShowHighlightWindow={setShowHighlightWindow}
+              showHighlightWindow={showHighlightWindow}
+            />
           )}
         />
         <SuggestionMenuController
