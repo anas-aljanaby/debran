@@ -10,6 +10,8 @@ import {
   BlockNoteEditor,
   filterSuggestionItems,
   PartialBlock,
+  BlockIdentifier,
+  DefaultBlockSchema,
 } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
 import {
@@ -18,6 +20,7 @@ import {
   useCreateBlockNote,
   useComponentsContext,
 } from "@blocknote/react";
+import { PromptButton } from "./prompt-button";
 
 import { setDynamicPosition } from "./editor-utils";
 import {
@@ -30,6 +33,7 @@ import {
 import { getCustomSlashMenuItems } from "./editor-menu-items";
 import PromptWindow from "./promptWindow";
 import CustomToolbar from "./custom-toolbar";
+import { Button } from "./ui/button";
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -64,6 +68,8 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     left: 0,
   });
 
+  const [selectedBlockId, setSelectedBlockId] = useState<BlockIdentifier | null>(null);
+
   const editor: BlockNoteEditor = useCreateBlockNote({
     initialContent: initialContent
       ? (JSON.parse(initialContent) as PartialBlock[])
@@ -84,6 +90,48 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     setShowHighlightWindow
   );
 
+  const handleSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim() !== "") {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      setHighlightPosition({
+        top: rect.top + window.scrollY + rect.height + 30,
+        left: rect.left + window.scrollX,
+      });
+
+      const selectedBlock = editor.getTextCursorPosition().block;
+      console.log("detected block id", selectedBlock.id);
+      setSelectedBlockId(selectedBlock.id);
+
+      editor.addStyles({ backgroundColor: "blue" });
+
+      setShowHighlightWindow(true);
+    }
+  };
+
+  useEffect(() => {
+    console.log("show highlight window", showHighlightWindow);
+    console.log("block id from useEffect", selectedBlockId);
+    if (!showHighlightWindow && selectedBlockId) {
+      const selectedBlock = editor.getBlock(selectedBlockId);
+      console.log("selected block", selectedBlock);
+      if (selectedBlock) {
+        const updatedContent = selectedBlock.content.map(item => {
+          if (typeof item === 'string') {
+            return item;
+          }
+          if (item.styles && item.styles.backgroundColor === 'blue') {
+            return { ...item, text: 'test', styles: { ...item.styles, backgroundColor: 'default' } };
+          }
+          return item;
+        });
+        editor.updateBlock(selectedBlock, { content: updatedContent });
+      }
+      setSelectedBlockId(null);
+    }
+  }, [showHighlightWindow, selectedBlockId, editor]);
+
   return (
     <div>
       <BlockNoteView
@@ -97,9 +145,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         <FormattingToolbarController
           formattingToolbar={() => (
             <CustomToolbar
-              setHighlightPosition={setHighlightPosition}
-              setShowHighlightWindow={setShowHighlightWindow}
-              showHighlightWindow={showHighlightWindow}
+              onClick={handleSelection}
             />
           )}
         />

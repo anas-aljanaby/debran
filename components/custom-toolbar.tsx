@@ -14,15 +14,11 @@ import {
 import { PromptButton } from "./prompt-button";
 
 interface CustomToolbarProps {
-  setHighlightPosition: (position: { top: number; left: number }) => void;
-  setShowHighlightWindow: (value: boolean) => void;
-  showHighlightWindow: boolean; // State to track if the highlight window is visible
+  onClick: () => void;
 }
 
 const CustomToolbar: React.FC<CustomToolbarProps> = ({
-  setHighlightPosition,
-  setShowHighlightWindow,
-  showHighlightWindow, 
+  onClick,
 }) => {
   return (
     <FormattingToolbar>
@@ -30,9 +26,7 @@ const CustomToolbar: React.FC<CustomToolbarProps> = ({
       <PromptButton
         label="Blue"
         tooltip="Apply Blue Color"
-        setHighlightPosition={setHighlightPosition}
-        setShowHighlightWindow={setShowHighlightWindow}
-        showHighlightWindow={showHighlightWindow}
+        onClick={onClick}
       />
       <FileCaptionButton key={"fileCaptionButton"} />
       <FileReplaceButton key={"replaceFileButton"} />
