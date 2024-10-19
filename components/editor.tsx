@@ -34,6 +34,7 @@ import { getCustomSlashMenuItems } from "./editor-menu-items";
 import PromptWindow from "./promptWindow";
 import CustomToolbar from "./custom-toolbar";
 import { Button } from "./ui/button";
+import { extractTextFromBlock } from "./editor-utils"; // Make sure this import exists
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -111,26 +112,60 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   };
 
   useEffect(() => {
-    console.log("show highlight window", showHighlightWindow);
-    console.log("block id from useEffect", selectedBlockId);
-    if (!showHighlightWindow && selectedBlockId) {
-      const selectedBlock = editor.getBlock(selectedBlockId);
-      console.log("selected block", selectedBlock);
-      if (selectedBlock) {
-        const updatedContent = selectedBlock.content.map(item => {
-          if (typeof item === 'string') {
-            return item;
+    const handleHighlightedText = async () => {
+      if (!showHighlightWindow && selectedBlockId) {
+        const selectedBlock = editor.getBlock(selectedBlockId);
+        console.log("selected block", selectedBlock);
+        if (selectedBlock) {
+          const extractedText = extractTextFromBlock(selectedBlock);
+          const combinedText = `Finish the following text, by applying the instructions.
+If there are no instructions just continue based on the text.
+Instructions: 
+${userInput}
+Text:
+${extractedText}`;
+
+          console.log("combined text", combinedText);
+          try {
+            const response = await fetch('/api/llm', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ text: combinedText, context }),
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to get completion');
+            }
+
+            const data = await response.json();
+            const completion = data.completion;
+
+            const updatedContent = selectedBlock.content.map(item => {
+              if (typeof item === 'string') {
+                return item;
+              }
+              if (item.styles && item.styles.backgroundColor === 'blue') {
+                return {
+                  ...item,
+                  text: completion,
+                  styles: { ...item.styles, backgroundColor: 'default' }
+                };
+              }
+              return item;
+            });
+
+            editor.updateBlock(selectedBlock, { content: updatedContent });
+          } catch (error) {
+            console.error('Error getting completion:', error);
           }
-          if (item.styles && item.styles.backgroundColor === 'blue') {
-            return { ...item, text: 'test', styles: { ...item.styles, backgroundColor: 'default' } };
-          }
-          return item;
-        });
-        editor.updateBlock(selectedBlock, { content: updatedContent });
+        }
+        setSelectedBlockId(null);
       }
-      setSelectedBlockId(null);
-    }
-  }, [showHighlightWindow, selectedBlockId, editor]);
+    };
+    handleHighlightedText();
+  }, [showHighlightWindow, selectedBlockId, editor, userInput, context]);
 
   return (
     <div>

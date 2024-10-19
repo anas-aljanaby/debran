@@ -25,11 +25,11 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
   const windowRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // useEffect(() => {
-  //   if (showWindow && inputRef.current) {
-  //     inputRef.current.focus();
-  //   }
-  // }, [showWindow]);
+  useEffect(() => {
+    if (showWindow && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showWindow]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -21,8 +21,14 @@ export async function handleContinueWriting(
     if (!currentBlock) return;
   
     const extractedText = extractTextFromBlock(currentBlock);
-    const combinedText = `${extractedText} ${userInput}`;
+    const combinedText = `Finish the following text, by applying the insturctions.
+If there are no instructions just continue based on the text.
+Instructions: 
+${userInput}
+Text:
+${extractedText}`;
   
+    console.log('combinedText:', combinedText);
     try {
       const response = await fetch('/api/llm', {
         method: 'POST',
