@@ -1,9 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
-
-
-//TODO: add x button to close the prompt window
-//TODO: Style the prompt window for clear visibility, for dark and light mode
+import { X } from 'lucide-react'; // Import X icon from lucide-react
 
 interface PromptWindowProps {
   showWindow: boolean;
@@ -61,15 +58,21 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
   return (
     <div
       ref={windowRef}
-      className="absolute z-[1000] p-4 bg-white 
-      dark:bg-[#1F1F1F] border  border-gray-500 backdrop-blur-md
-      dark:border-gray-300 rounded-lg shadow-2xl dark:shadow-2xl w-2/5"
+      className="absolute z-[1000] p-4 bg-white/80 dark:bg-[#1F1F1F]/80 
+      border border-gray-500 dark:border-gray-300 rounded-lg shadow-2xl 
+      dark:shadow-2xl w-2/5 backdrop-blur-md"
       style={{
         top: position.top,
         left: position.left,
         height: "80px",
       }}
     >
+      <button
+        onClick={onCancel}
+        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:text-[#575757] dark:hover:text-[#CFCFCF] transition-colors"
+      >
+        <X size={18} />
+      </button>
       <Input
         ref={inputRef}
         value={userInput}
@@ -77,10 +80,9 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
         placeholder="Give instructions to the AI how to continue..."
         className="w-full text-md border-none focus:ring-0 focus:outline-none
         bg-transparent text-gray-600 dark:text-[#CFCFCF] placeholder:text-gray-400 dark:placeholder:text-[#575757]"
-
         style={{
-            boxShadow: "none",
-            height: "30px",
+          boxShadow: "none",
+          height: "30px",
         }}
         onKeyDown={onKeyDown}
       />

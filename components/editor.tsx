@@ -130,6 +130,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
           if (textWindowBlock) {
             handleContinueWriting(editor, textWindowBlock, userInput, context);
           }
+          setUserInput("");
           setShowTextWindow(false);
         }}
       />
@@ -153,6 +154,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
           setSelectedBlockId(null);
           setSelectedText("");
           setShowHighlightWindow(false);
+          setUserInput("");
           }
         }
       />
