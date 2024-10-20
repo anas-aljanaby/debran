@@ -10,8 +10,8 @@ interface PromptWindowProps {
   position: { top: number; left: number };
   userInput: string;
   setUserInput: (input: string) => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onClickOutside: () => void;
+  onCancel: () => void;
+  onSubmit: () => void;
 }
 
 const PromptWindow: React.FC<PromptWindowProps> = ({
@@ -19,8 +19,8 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
   position,
   userInput,
   setUserInput,
-  onKeyDown,
-  onClickOutside,
+  onCancel,
+  onSubmit,
 }) => {
   const windowRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +34,7 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (windowRef.current && !windowRef.current.contains(event.target as Node)) {
-        onClickOutside();
+        onCancel();
       }
     };
 
@@ -45,9 +45,18 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showWindow, onClickOutside]);
+  }, [showWindow, onCancel]);
 
   if (!showWindow) return null;
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      onCancel();
+    }
+    if (e.key === "Enter") {
+      onSubmit();
+    }
+  }
 
   return (
     <div

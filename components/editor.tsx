@@ -17,7 +17,6 @@ import {
   FormattingToolbarController,
   SuggestionMenuController,
   useCreateBlockNote,
-  useComponentsContext,
 } from "@blocknote/react";
 import { resetHighlightedText, setDynamicPosition } from "./editor-utils";
 import {
@@ -81,32 +80,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     handleEditorChange(editor, onChange);
   };
 
-  const keyDownTextWindow = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      setShowTextWindow(false);
-    } else if (e.key === "Enter") {
-      if (textWindowBlock) {
-      handleContinueWriting(editor, textWindowBlock, userInput, context);
-      }
-      setShowTextWindow(false);
-    }
-  }
-
-  const keyDownHighlightWindow = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      resetHighlightedText(editor, selectedBlockId);
-      setShowHighlightWindow(false);
-      setSelectedBlockId(null);
-      setSelectedText("");
-    } else if (e.key === "Enter") {
-      handleHighlightedText(editor, selectedBlockId, selectedText, userInput, context, showHighlightWindow);
-      setSelectedBlockId(null);
-      setSelectedText("");
-      setShowHighlightWindow(false);
-
-    }
-  }
-
   return (
     <div>
       <BlockNoteView
@@ -152,10 +125,14 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         position={textWindowPosition}
         userInput={userInput}
         setUserInput={setUserInput}
-        onKeyDown={keyDownTextWindow}
-        onClickOutside={() => setShowTextWindow(false)}
+        onCancel={() => {setShowTextWindow(false)}}
+        onSubmit={() => {
+          if (textWindowBlock) {
+            handleContinueWriting(editor, textWindowBlock, userInput, context);
+          }
+          setShowTextWindow(false);
+        }}
       />
-
 
       {/* Highlight Text PromptWindow */}
       <PromptWindow
@@ -163,11 +140,19 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         position={highlightPosition}
         userInput={userInput}
         setUserInput={setUserInput}
-        onKeyDown={keyDownHighlightWindow}
-        onClickOutside={() => 
+        onCancel={() => 
           {
-            resetHighlightedText(editor, selectedBlockId);
-            setShowHighlightWindow(false)
+          resetHighlightedText(editor, selectedBlockId);
+          setShowHighlightWindow(false);
+          setSelectedBlockId(null);
+          setSelectedText("");
+          }
+        }
+        onSubmit={() => {
+          handleHighlightedText(editor, selectedBlockId, selectedText, userInput, context, showHighlightWindow);
+          setSelectedBlockId(null);
+          setSelectedText("");
+          setShowHighlightWindow(false);
           }
         }
       />
