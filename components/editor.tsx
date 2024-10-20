@@ -11,7 +11,6 @@ import {
   filterSuggestionItems,
   PartialBlock,
   BlockIdentifier,
-  DefaultBlockSchema,
 } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
 import {
@@ -20,21 +19,15 @@ import {
   useCreateBlockNote,
   useComponentsContext,
 } from "@blocknote/react";
-import { PromptButton } from "./prompt-button";
-
 import { setDynamicPosition } from "./editor-utils";
 import {
   handleUpload, 
-  createHandleKeyDown, 
   handleContinueWritingWrapper,
   handleEditorChange,
-  handleSelection
  } from "./editor-handlers";
 import { getCustomSlashMenuItems } from "./editor-menu-items";
-import PromptWindow from "./promptWindow";
+import PromptWindow from "./prompt-window";
 import CustomToolbar from "./custom-toolbar";
-import { Button } from "./ui/button";
-import { extractTextFromBlock } from "./editor-utils"; // Make sure this import exists
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -86,30 +79,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     handleEditorChange(editor, onChange);
   };
 
-
-
-  const handleSelection = () => {
-    const selection = window.getSelection();
-    if (selection && selection.toString().trim() !== "") {
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      setHighlightPosition({
-        top: rect.top + window.scrollY + rect.height + 30,
-        left: rect.left + window.scrollX,
-      });
-
-      const selectedBlock = editor.getTextCursorPosition().block;
-      console.log("detected block id", selectedBlock.id);
-      setSelectedBlockId(selectedBlock.id);
-
-      // Save the selected text
-      setSelectedText(editor.getSelectedText());
-
-      editor.addStyles({ backgroundColor: "blue" });
-
-      setShowHighlightWindow(true);
-    }
-  };
 
   const handleHighlightedText = async () => {
     if (showHighlightWindow && selectedBlockId && selectedText) {
@@ -216,7 +185,11 @@ ${selectedText}`;
         <FormattingToolbarController
           formattingToolbar={() => (
             <CustomToolbar
-              onClick={handleSelection}
+              editor={editor}
+              setShowHighlightWindow={setShowHighlightWindow}
+              setHighlightPosition={setHighlightPosition}
+              setSelectedBlockId={setSelectedBlockId}
+              setSelectedText={setSelectedText}
             />
           )}
         />
@@ -248,8 +221,6 @@ ${selectedText}`;
         onClickOutside={() => setShowTextWindow(false)}
       />
 
-    <PromptWindow>
-    </PromptWindow>
 
       {/* Highlight Text PromptWindow */}
       <PromptWindow
