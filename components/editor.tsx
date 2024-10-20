@@ -19,10 +19,12 @@ import {
   useCreateBlockNote,
   useComponentsContext,
 } from "@blocknote/react";
-import { setDynamicPosition } from "./editor-utils";
+import { resetHighlightedText, setDynamicPosition } from "./editor-utils";
 import {
   handleUpload, 
   handleContinueWritingWrapper,
+  handleHighlightedText,
+  handleContinueWriting,
   handleEditorChange,
  } from "./editor-handlers";
 import { getCustomSlashMenuItems } from "./editor-menu-items";
@@ -79,96 +81,29 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     handleEditorChange(editor, onChange);
   };
 
-
-  const handleHighlightedText = async () => {
-    if (showHighlightWindow && selectedBlockId && selectedText) {
-      const selectedBlock = editor.getBlock(selectedBlockId);
-      console.log("selected block", selectedBlock);
-      if (selectedBlock) {
-        const combinedText = `Finish the following text, by applying the instructions.
-If there are no instructions just continue based on the text.
-Instructions: 
-${userInput}
-Text:
-${selectedText}`;
-
-        console.log("combined text", combinedText);
-        try {
-          const response = await fetch('/api/llm', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text: combinedText, context }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to get completion');
-          }
-
-          const data = await response.json();
-          const completion = data.completion;
-
-          const updatedContent = selectedBlock.content.map(item => {
-            if (typeof item === 'string') {
-              return item.replace(selectedText, completion);
-            }
-            if (item.styles && item.styles.backgroundColor === 'blue') {
-              return {
-                ...item,
-                text: item.text.replace(selectedText, completion),
-                styles: { ...item.styles, backgroundColor: 'default' }
-              };
-            }
-            return item;
-          });
-
-          editor.updateBlock(selectedBlock, { content: updatedContent });
-        } catch (error) {
-          console.error('Error getting completion:', error);
-        }
-      }
-      setSelectedBlockId(null);
-      setSelectedText("");
-      setShowHighlightWindow(false);
-    }
-  };
-
-  const resetHighlightedText = () => {
-    if (selectedBlockId) {
-      const selectedBlock = editor.getBlock(selectedBlockId);
-      if (selectedBlock) {
-        const updatedContent = selectedBlock.content.map(item => {
-          if (typeof item === 'object' && item.styles && item.styles.backgroundColor === 'blue') {
-            return {
-              ...item,
-              styles: { ...item.styles, backgroundColor: 'default' }
-            };
-          }
-          return item;
-        });
-        editor.updateBlock(selectedBlock, { content: updatedContent });
-      }
-    }
-    setSelectedBlockId(null);
-    setSelectedText("");
-  };
-
   const keyDownTextWindow = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       setShowTextWindow(false);
     } else if (e.key === "Enter") {
-      handleContinueWritingWrapper(editor, textWindowBlock, userInput, context, setShowTextWindow, setUserInput);
+      if (textWindowBlock) {
+      handleContinueWriting(editor, textWindowBlock, userInput, context);
+      }
       setShowTextWindow(false);
     }
   }
 
   const keyDownHighlightWindow = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
-      resetHighlightedText();
+      resetHighlightedText(editor, selectedBlockId);
       setShowHighlightWindow(false);
+      setSelectedBlockId(null);
+      setSelectedText("");
     } else if (e.key === "Enter") {
-      handleHighlightedText();
+      handleHighlightedText(editor, selectedBlockId, selectedText, userInput, context, showHighlightWindow);
+      setSelectedBlockId(null);
+      setSelectedText("");
+      setShowHighlightWindow(false);
+
     }
   }
 
@@ -231,7 +166,7 @@ ${selectedText}`;
         onKeyDown={keyDownHighlightWindow}
         onClickOutside={() => 
           {
-            resetHighlightedText();
+            resetHighlightedText(editor, selectedBlockId);
             setShowHighlightWindow(false)
           }
         }
