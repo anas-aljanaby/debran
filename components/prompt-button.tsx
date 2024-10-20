@@ -8,8 +8,6 @@ import React, { useState, useEffect } from "react";
 
 import { PartialBlock, BlockIdentifier, DefaultBlockSchema, BlockNoteEditor } from "@blocknote/core";
 
-
-
 interface PromptButtonProps {
   label: string;
   tooltip: string;

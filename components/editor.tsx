@@ -70,6 +70,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   });
 
   const [selectedBlockId, setSelectedBlockId] = useState<BlockIdentifier | null>(null);
+  const [selectedText, setSelectedText] = useState("");
 
   const editor: BlockNoteEditor = useCreateBlockNote({
     initialContent: initialContent
@@ -84,12 +85,8 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   const handleEditorChangeWrapper = () => {
     handleEditorChange(editor, onChange);
   };
-  
-  const handleKeyDown = createHandleKeyDown(
-    () => handleContinueWritingWrapper(editor, textWindowBlock, userInput, context, setShowTextWindow, setUserInput),
-    setShowTextWindow,
-    setShowHighlightWindow
-  );
+
+
 
   const handleSelection = () => {
     const selection = window.getSelection();
@@ -105,67 +102,106 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       console.log("detected block id", selectedBlock.id);
       setSelectedBlockId(selectedBlock.id);
 
+      // Save the selected text
+      setSelectedText(editor.getSelectedText());
+
       editor.addStyles({ backgroundColor: "blue" });
 
       setShowHighlightWindow(true);
     }
   };
 
-  useEffect(() => {
-    const handleHighlightedText = async () => {
-      if (!showHighlightWindow && selectedBlockId) {
-        const selectedBlock = editor.getBlock(selectedBlockId);
-        console.log("selected block", selectedBlock);
-        if (selectedBlock) {
-          const extractedText = extractTextFromBlock(selectedBlock);
-          const combinedText = `Finish the following text, by applying the instructions.
+  const handleHighlightedText = async () => {
+    if (showHighlightWindow && selectedBlockId && selectedText) {
+      const selectedBlock = editor.getBlock(selectedBlockId);
+      console.log("selected block", selectedBlock);
+      if (selectedBlock) {
+        const combinedText = `Finish the following text, by applying the instructions.
 If there are no instructions just continue based on the text.
 Instructions: 
 ${userInput}
 Text:
-${extractedText}`;
+${selectedText}`;
 
-          console.log("combined text", combinedText);
-          try {
-            const response = await fetch('/api/llm', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ text: combinedText, context }),
-            });
+        console.log("combined text", combinedText);
+        try {
+          const response = await fetch('/api/llm', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: combinedText, context }),
+          });
 
-            if (!response.ok) {
-              throw new Error('Failed to get completion');
-            }
-
-            const data = await response.json();
-            const completion = data.completion;
-
-            const updatedContent = selectedBlock.content.map(item => {
-              if (typeof item === 'string') {
-                return item;
-              }
-              if (item.styles && item.styles.backgroundColor === 'blue') {
-                return {
-                  ...item,
-                  text: completion,
-                  styles: { ...item.styles, backgroundColor: 'default' }
-                };
-              }
-              return item;
-            });
-
-            editor.updateBlock(selectedBlock, { content: updatedContent });
-          } catch (error) {
-            console.error('Error getting completion:', error);
+          if (!response.ok) {
+            throw new Error('Failed to get completion');
           }
+
+          const data = await response.json();
+          const completion = data.completion;
+
+          const updatedContent = selectedBlock.content.map(item => {
+            if (typeof item === 'string') {
+              return item.replace(selectedText, completion);
+            }
+            if (item.styles && item.styles.backgroundColor === 'blue') {
+              return {
+                ...item,
+                text: item.text.replace(selectedText, completion),
+                styles: { ...item.styles, backgroundColor: 'default' }
+              };
+            }
+            return item;
+          });
+
+          editor.updateBlock(selectedBlock, { content: updatedContent });
+        } catch (error) {
+          console.error('Error getting completion:', error);
         }
-        setSelectedBlockId(null);
       }
-    };
-    handleHighlightedText();
-  }, [showHighlightWindow, selectedBlockId, editor, userInput, context]);
+      setSelectedBlockId(null);
+      setSelectedText("");
+      setShowHighlightWindow(false);
+    }
+  };
+
+  const resetHighlightedText = () => {
+    if (selectedBlockId) {
+      const selectedBlock = editor.getBlock(selectedBlockId);
+      if (selectedBlock) {
+        const updatedContent = selectedBlock.content.map(item => {
+          if (typeof item === 'object' && item.styles && item.styles.backgroundColor === 'blue') {
+            return {
+              ...item,
+              styles: { ...item.styles, backgroundColor: 'default' }
+            };
+          }
+          return item;
+        });
+        editor.updateBlock(selectedBlock, { content: updatedContent });
+      }
+    }
+    setSelectedBlockId(null);
+    setSelectedText("");
+  };
+
+  const keyDownTextWindow = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setShowTextWindow(false);
+    } else if (e.key === "Enter") {
+      handleContinueWritingWrapper(editor, textWindowBlock, userInput, context, setShowTextWindow, setUserInput);
+      setShowTextWindow(false);
+    }
+  }
+
+  const keyDownHighlightWindow = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      resetHighlightedText();
+      setShowHighlightWindow(false);
+    } else if (e.key === "Enter") {
+      handleHighlightedText();
+    }
+  }
 
   return (
     <div>
@@ -208,9 +244,12 @@ ${extractedText}`;
         position={textWindowPosition}
         userInput={userInput}
         setUserInput={setUserInput}
-        onKeyDown={handleKeyDown}
+        onKeyDown={keyDownTextWindow}
         onClickOutside={() => setShowTextWindow(false)}
       />
+
+    <PromptWindow>
+    </PromptWindow>
 
       {/* Highlight Text PromptWindow */}
       <PromptWindow
@@ -218,8 +257,13 @@ ${extractedText}`;
         position={highlightPosition}
         userInput={userInput}
         setUserInput={setUserInput}
-        onKeyDown={handleKeyDown}
-        onClickOutside={() => setShowHighlightWindow(false)}
+        onKeyDown={keyDownHighlightWindow}
+        onClickOutside={() => 
+          {
+            resetHighlightedText();
+            setShowHighlightWindow(false)
+          }
+        }
       />
     </div>
   );

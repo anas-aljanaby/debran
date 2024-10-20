@@ -66,23 +66,6 @@ ${extractedText}`;
     }
   }
 
-export function createHandleKeyDown(
-  handleContinueWritingWrapper: () => Promise<void>,
-  setShowTextWindow: (value: boolean) => void,
-  setShowHighlightWindow: (value: boolean) => void
-) {
-  return (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      setShowTextWindow(false);
-      setShowHighlightWindow(false); // Close the highlight window on escape
-    } else if (e.key === "Enter") {
-      handleContinueWritingWrapper();
-      setShowTextWindow(false);
-      setShowHighlightWindow(false); // Close the highlight window on enter
-    }
-  };
-}
-
 export async function handleContinueWritingWrapper(
   editor: BlockNoteEditor,
   currentBlock: PartialBlock | null,
