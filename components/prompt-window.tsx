@@ -2,23 +2,31 @@ import React, { useRef, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { X } from 'lucide-react'; // Import X icon from lucide-react
 
-interface PromptWindowProps {
+interface PromptWindowConfig {
   showWindow: boolean;
   position: { top: number; left: number };
+  type: 'slashMenu' | 'highlight';
   userInput: string;
   setUserInput: (input: string) => void;
   onCancel: () => void;
   onSubmit: () => void;
 }
 
-const PromptWindow: React.FC<PromptWindowProps> = ({
-  showWindow,
-  position,
-  userInput,
-  setUserInput,
-  onCancel,
-  onSubmit,
-}) => {
+interface PromptWindowProps {
+  config: PromptWindowConfig;
+}
+
+const PromptWindow: React.FC<PromptWindowProps> = ({ config }) => {
+  const {
+    showWindow,
+    position,
+    type,
+    userInput,
+    setUserInput,
+    onCancel,
+    onSubmit,
+  } = config;
+
   const windowRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -87,7 +95,7 @@ const PromptWindow: React.FC<PromptWindowProps> = ({
         onKeyDown={onKeyDown}
       />
       <div className="mt-2 text-sm text-gray-400 dark:text-[#575757]">
-        Enter to confirm, Esc to close
+        {type === 'slashMenu' ? 'Continue writing' : 'Edit highlighted text'}
       </div>
     </div>
   );

@@ -10,7 +10,6 @@ import {
   CreateLinkButton,
   FileCaptionButton,
   FileReplaceButton,
-  useBlockNoteEditor,
   useComponentsContext,
 } from "@blocknote/react";
 import "@blocknote/mantine/style.css";
@@ -18,16 +17,14 @@ import { BlockNoteEditor } from "@blocknote/core";
 
 interface CustomToolbarProps {
   editor: BlockNoteEditor;
-  setShowHighlightWindow: (show: boolean) => void;
-  setHighlightPosition: (position: { top: number; left: number }) => void;
+  openHighlightPrompt: (position: { top: number; left: number }) => void;
   setSelectedBlockId: (id: string) => void;
   setSelectedText: (text: string) => void;
 }
 
 const CustomToolbar: React.FC<CustomToolbarProps> = ({
   editor,
-  setShowHighlightWindow,
-  setHighlightPosition,
+  openHighlightPrompt,
   setSelectedBlockId,
   setSelectedText,
 }) => {
@@ -38,10 +35,10 @@ const CustomToolbar: React.FC<CustomToolbarProps> = ({
     if (selection && selection.toString().trim() !== "") {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-      setHighlightPosition({
+      const position = {
         top: rect.top + window.scrollY + rect.height + 30,
         left: rect.left + window.scrollX,
-      });
+      };
 
       const selectedBlock = editor.getTextCursorPosition().block;
       console.log("detected block id", selectedBlock.id);
@@ -52,7 +49,7 @@ const CustomToolbar: React.FC<CustomToolbarProps> = ({
 
       editor.addStyles({ backgroundColor: "blue" });
 
-      setShowHighlightWindow(true);
+      openHighlightPrompt(position);
     }
   };
 

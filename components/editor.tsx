@@ -29,6 +29,7 @@ import {
 import { getCustomSlashMenuItems } from "./editor-menu-items";
 import PromptWindow from "./prompt-window";
 import CustomToolbar from "./custom-toolbar";
+import { usePromptWindow } from "@/hooks/use-prompt-window";
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -44,7 +45,6 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   const [textWindowBlock, setTextWindowBlock] = useState<PartialBlock | null>(
     null
   );
-  const [userInput, setUserInput] = useState(""); // State to capture the user's input in the text area
 
   const [textWindowPosition, setTextWindowPosition] = useState<{
     top: number;
@@ -76,6 +76,33 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     },
   });
 
+  const {
+    showPromptWindow,
+    promptWindowPosition,
+    promptWindowType,
+    userInput,
+    setUserInput,
+    openPromptWindow,
+    closePromptWindow,
+    handlePromptSubmit,
+  } = usePromptWindow({
+    onSlashMenuSubmit: (input) => {
+      if (textWindowBlock) {
+        handleContinueWriting(editor, textWindowBlock, input, context);
+      }
+    },
+    onHighlightSubmit: (input) => {
+      handleHighlightedText(editor, selectedBlockId, selectedText, input, context, true);
+      setSelectedBlockId(null);
+      setSelectedText("");
+    },
+    onHighlightCancel: () => {
+      resetHighlightedText(editor, selectedBlockId);
+      setSelectedBlockId(null);
+      setSelectedText("");
+    },
+  });
+
   const handleEditorChangeWrapper = () => {
     handleEditorChange(editor, onChange);
   };
@@ -94,8 +121,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
           formattingToolbar={() => (
             <CustomToolbar
               editor={editor}
-              setShowHighlightWindow={setShowHighlightWindow}
-              setHighlightPosition={setHighlightPosition}
+              openHighlightPrompt={(position) => openPromptWindow('highlight', position)}
               setSelectedBlockId={setSelectedBlockId}
               setSelectedText={setSelectedText}
             />
@@ -109,8 +135,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
                 editor,
                 context,
                 setTextWindowBlock,
-                setTextWindowPosition,
-                setShowTextWindow,
+                openPromptWindow,
                 setDynamicPosition
               ),
               query
@@ -119,44 +144,16 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
         />
       </BlockNoteView>
 
-      {/* Slash Menu PromptWindow */}
       <PromptWindow
-        showWindow={showTextWindow}
-        position={textWindowPosition}
-        userInput={userInput}
-        setUserInput={setUserInput}
-        onCancel={() => {setShowTextWindow(false)}}
-        onSubmit={() => {
-          if (textWindowBlock) {
-            handleContinueWriting(editor, textWindowBlock, userInput, context);
-          }
-          setUserInput("");
-          setShowTextWindow(false);
+        config={{
+          showWindow: showPromptWindow,
+          position: promptWindowPosition,
+          type: promptWindowType,
+          userInput,
+          setUserInput,
+          onCancel: closePromptWindow,
+          onSubmit: handlePromptSubmit,
         }}
-      />
-
-      {/* Highlight Text PromptWindow */}
-      <PromptWindow
-        showWindow={showHighlightWindow}
-        position={highlightPosition}
-        userInput={userInput}
-        setUserInput={setUserInput}
-        onCancel={() => 
-          {
-          resetHighlightedText(editor, selectedBlockId);
-          setShowHighlightWindow(false);
-          setSelectedBlockId(null);
-          setSelectedText("");
-          }
-        }
-        onSubmit={() => {
-          handleHighlightedText(editor, selectedBlockId, selectedText, userInput, context, showHighlightWindow);
-          setSelectedBlockId(null);
-          setSelectedText("");
-          setShowHighlightWindow(false);
-          setUserInput("");
-          }
-        }
       />
     </div>
   );
