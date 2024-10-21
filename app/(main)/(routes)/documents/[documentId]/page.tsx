@@ -13,7 +13,7 @@ import { useMutation, useQuery } from "convex/react";
 
 interface DocumentIdPageProps {
   params: {
-    documentId: Id<"documents">;
+    documentId: string;
   };
 }
 
@@ -61,9 +61,15 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       <Cover url={document.coverImage} />
       <div className="mx-auto md:max-w-3xl lg:max-w-4xl">
         <Toolbar initialData={document} />
-        <Editor onChange={onChange} initialContent={document.content} />
+        <Editor
+          onChange={onChange}
+          initialContent={document.content}
+          editable={true}
+          documentId={params.documentId as Id<"documents">}
+        />
       </div>
-      </div>
+    </div>
   );
 };
+
 export default DocumentIdPage;

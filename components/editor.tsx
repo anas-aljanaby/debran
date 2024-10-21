@@ -21,7 +21,6 @@ import {
 import { resetHighlightedText, setDynamicPosition } from "./editor-utils";
 import {
   handleUpload, 
-  handleContinueWritingWrapper,
   handleHighlightedText,
   handleContinueWriting,
   handleEditorChange,
@@ -30,14 +29,18 @@ import { getCustomSlashMenuItems } from "./editor-menu-items";
 import PromptWindow from "./prompt-window";
 import CustomToolbar from "./custom-toolbar";
 import { usePromptWindow } from "@/hooks/use-prompt-window";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface EditorProps {
   onChange: (value: string) => void;
   initialContent?: string;
   editable?: boolean;
+  documentId: Id<"documents">;
 }
 
-const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
+const Editor = ({ onChange, initialContent, editable, documentId }: EditorProps) => {
   const { resolvedTheme } = useTheme();
   const { edgestore } = useEdgeStore();
   const [context, setContext] = useState("");
@@ -46,6 +49,9 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
     null
   );
 
+  // TODO: function to set the context; which will be all the text
+  // from the parent documents of current document
+  
   const [textWindowPosition, setTextWindowPosition] = useState<{
     top: number;
     left: number;
@@ -92,7 +98,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       }
     },
     onHighlightSubmit: (input) => {
-      handleHighlightedText(editor, selectedBlockId, selectedText, input, context, true);
+      handleHighlightedText(editor, selectedBlockId, selectedText, input);
       setSelectedBlockId(null);
       setSelectedText("");
     },
@@ -106,6 +112,15 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
   const handleEditorChangeWrapper = () => {
     handleEditorChange(editor, onChange);
   };
+
+  // Add this function to fetch and set the context
+  const fetchAndSetContext = useQuery(api.documents.getParentContent, { documentId });
+
+  useEffect(() => {
+    if (fetchAndSetContext) {
+      setContext(fetchAndSetContext);
+    }
+  }, [fetchAndSetContext]);
 
   return (
     <div>

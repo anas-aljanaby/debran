@@ -352,3 +352,30 @@ export const removeCoverImage = mutation({
     return document;
   },
 });
+
+export const getParentContent = query({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const document = await ctx.db.get(args.documentId);
+    if (!document || !document.parentDocument) {
+      return "";
+    }
+
+    const parentDocument = await ctx.db.get(document.parentDocument);
+    if (!parentDocument || !parentDocument.content) {
+      return "";
+    }
+
+    const content = JSON.parse(parentDocument.content);
+    return extractTextFromContent(content);
+  },
+});
+
+function extractTextFromContent(content: any[]): string {
+  return content.map(block => {
+    if (block.type === 'paragraph' || block.type === 'heading') {
+      return block.content.map((item: any) => item.text).join(' ');
+    }
+    return '';
+  }).filter(text => text.length > 0).join('\n');
+}

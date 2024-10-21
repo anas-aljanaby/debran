@@ -1,8 +1,7 @@
-import { BlockIdentifier, BlockNoteEditor, InlineContent, PartialBlock } from "@blocknote/core";
+import { BlockIdentifier, BlockNoteEditor, fileBlockConfig, InlineContent, PartialBlock } from "@blocknote/core";
 import { EdgeStore } from "@/lib/edgestore";
 import { extractTextFromBlock } from './editor-utils';
-import { KeyboardEvent } from "react";
-
+    
 export const handleUpload = async (edgestore: EdgeStore) => {
   return async (file: File) => {
     const res = await edgestore.publicFiles.upload({
@@ -12,7 +11,7 @@ export const handleUpload = async (edgestore: EdgeStore) => {
   };
 };
 
-async function getCompletion(text: string, context: string): Promise<string> {
+async function getCompletion(text: string, context: string = ""): Promise<string> {
   try {
     const response = await fetch('/api/llm', {
       method: 'POST',
@@ -39,43 +38,53 @@ export const handleHighlightedText = async (
   selectedBlockId: BlockIdentifier | null,
   selectedText: string,
   userInput: string,
-  context: string,
-  showHighlightWindow: boolean
 ) => {
-  if (showHighlightWindow && selectedBlockId && selectedText) {
-    const selectedBlock = editor.getBlock(selectedBlockId);
-    console.log("selected block", selectedBlock);
-    if (selectedBlock) {
-      const combinedText = `Finish the following text, by applying the instructions.
-If there are no instructions just continue based on the text.
-Instructions: 
-${userInput}
-Text:
-${selectedText}`;
+  if (!selectedBlockId) return;
 
-      console.log("combined text", combinedText);
-      try {
-        const completion = await getCompletion(combinedText, context);
+  // Get the full document content
+  let fullContent = '';
+  editor.forEachBlock((block) => {
+    fullContent += block.content.map(inline => inline.text).join(' ') + '\n';
+  });
 
-        const updatedContent = selectedBlock.content.map(item => {
-          if (typeof item === 'string') {
-            return item.replace(selectedText, completion);
-          }
-          if (item.styles && item.styles.backgroundColor === 'blue') {
-            return {
-              ...item,
-              text: item.text.replace(selectedText, completion),
-              styles: { ...item.styles, backgroundColor: 'default' }
-            };
-          }
-          return item;
-        });
+  // Prepare the prompt
+  const prompt = `Here is the full document content:
 
-        editor.updateBlock(selectedBlock, { content: updatedContent });
-      } catch (error) {
-        // Error handling is done in getCompletion function
-      }
-    }
+  ${fullContent}
+  
+  The following text is highlighted: "${selectedText}"
+  
+  ${userInput ? `Apply these instructions to the highlighted text only: ${userInput}` : 'Provide a synonym or brief rephrase for the highlighted text only, without returning any non highlighted text.'}
+  
+  The replacement should fit naturally in place of the highlighted text, maintaining the original sentence structure and context. Do not introduce new ideas or sentences.`;
+  
+
+  console.log("prompt\n", prompt);
+  try {
+    // Call your AI service here with the prompt
+    const response = await getCompletion(prompt);
+
+    editor.updateBlock(selectedBlockId, {
+      content: editor.getBlock(selectedBlockId)!.content.map(inline => {
+        if (inline.type === 'text' && inline.text === selectedText) {
+          return {
+            ...inline,
+            text: response,
+            styles: { ...inline.styles, backgroundColor: 'default' }
+          };
+        }
+        if (inline.type === 'text' && inline.styles && inline.styles.backgroundColor === 'blue') {
+          return {
+            ...inline,
+            text: inline.text.replace(selectedText, response),
+            styles: { ...inline.styles, backgroundColor: 'default' }
+          };
+        }
+        return inline;
+      }),
+    });
+  } catch (error) {
+    console.error('Error in handleHighlightedText:', error);
   }
 };
 
@@ -86,7 +95,6 @@ export async function handleContinueWriting(
   context: string
 ) {
   if (!currentBlock) return;
-
   const extractedText = extractTextFromBlock(currentBlock);
   const combinedText = `Finish the following text, by applying the insturctions.
 If there are no instructions just continue based on the text.
@@ -98,7 +106,6 @@ ${extractedText}`;
   console.log('combinedText:', combinedText);
   try {
     const completion = await getCompletion(combinedText, context);
-
     const aiSuggestion: InlineContent<any, any> = {
       type: "text",
       text: completion,
