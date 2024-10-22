@@ -1,6 +1,6 @@
 "use client";
 
-import { ElementRef, useRef, useState } from "react";
+import { ElementRef, useRef, useState, useEffect } from "react";
 
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -27,6 +27,7 @@ export const Toolbar = ({ initialData, preview, onLlmContextChange, llmContext }
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(initialData.title);
   const [showLlmContext, setShowLlmContext] = useState(false);
+  const [localLlmContext, setLocalLlmContext] = useState(llmContext);
 
   const update = useMutation(api.documents.update);
   const removeIcon = useMutation(api.documents.removeIcon);
@@ -75,6 +76,25 @@ export const Toolbar = ({ initialData, preview, onLlmContextChange, llmContext }
   const toggleLlmContext = () => {
     setShowLlmContext(!showLlmContext);
   };
+
+  const onLlmContextInput = (value: string) => {
+    setLocalLlmContext(value);
+  };
+
+  const onLlmContextBlur = () => {
+    if (localLlmContext !== llmContext) {
+      onLlmContextChange(localLlmContext);
+      update({
+        id: initialData._id,
+        llmContext: localLlmContext,
+      });
+    }
+  };
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalLlmContext(llmContext);
+  }, [llmContext]);
 
   return (
     <div className="group relative pl-12">
@@ -125,16 +145,16 @@ export const Toolbar = ({ initialData, preview, onLlmContextChange, llmContext }
       </div>
       {showLlmContext && !preview && (
         <TextareaAutosize
-          value={llmContext}
-          onChange={(e) => onLlmContextChange(e.target.value)}
+          value={localLlmContext}
+          onChange={(e) => onLlmContextInput(e.target.value)}
+          onBlur={onLlmContextBlur}
           placeholder="Enter context for the LLM..."
-          className="w-full resize-none rounded-lg dark:border-neutral-600
+          className="w-4/5 resize-none rounded-lg dark:border-neutral-600
            bg-transparent px-3 py-2 text-md border border-neutral-300
            placeholder:text-muted-foreground focus-visible:outline-none
            disabled:cursor-not-allowed disabled:opacity-50
            backdrop-blur-md shadow-md"
-           
-          rows={10}
+          minRows={3}
         />
       )}
       {isEditing && !preview ? (

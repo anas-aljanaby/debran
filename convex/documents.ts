@@ -264,7 +264,7 @@ export const update = mutation({
     content: v.optional(v.string()),
     coverImage: v.optional(v.string()),
     icon: v.optional(v.string()),
-    // isPublished: v.optional(v.boolean()),
+    llmContext: v.optional(v.string()), // Add this line
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();

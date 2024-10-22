@@ -6,10 +6,12 @@ export default defineSchema({
     title: v.string(),
     userId: v.string(),
     isArchived: v.boolean(),
+    
     parentDocument: v.optional(v.id("documents")),
     content: v.optional(v.string()),
     coverImage: v.optional(v.string()),
     icon: v.optional(v.string()),
+    llmContext: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
     .index("by_user_parent", ["userId", "parentDocument"]),

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import TextareaAutosize from "react-textarea-autosize";
 
@@ -34,10 +34,24 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
 
   const update = useMutation(api.documents.update);
 
+  useEffect(() => {
+    if (document) {
+      setLlmContext(document.llmContext || "");
+    }
+  }, [document]);
+
   const onChange = (content: string) => {
     update({
       id: params.documentId,
       content,
+    });
+  };
+
+  const onLlmContextChange = (context: string) => {
+    setLlmContext(context);
+    update({
+      id: params.documentId,
+      llmContext: context,
     });
   };
 
@@ -71,7 +85,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       <div className="mx-auto md:max-w-3xl lg:max-w-4xl">
         <Toolbar
           initialData={document}
-          onLlmContextChange={setLlmContext}
+          onLlmContextChange={onLlmContextChange}
           llmContext={llmContext}
         />
         <Editor
