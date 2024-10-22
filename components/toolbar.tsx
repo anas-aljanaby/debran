@@ -9,20 +9,24 @@ import { Doc } from "@/convex/_generated/dataModel";
 import { useCoverImage } from "@/hooks/use-cover-image";
 
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import TextareaAutosize from "react-textarea-autosize";
 import { IconPicker } from "./icon-picker";
-import { ImageIcon, Smile, X } from "lucide-react";
+import { Smile, X, MessageSquare } from "lucide-react";
 
 interface ToolbarProps {
   initialData: Doc<"documents">;
   preview?: boolean;
+  onLlmContextChange: (context: string) => void;
+  llmContext: string;
 }
 
-export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
+export const Toolbar = ({ initialData, preview, onLlmContextChange, llmContext }: ToolbarProps) => {
   const inputRef = useRef<ElementRef<"textarea">>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(initialData.title);
+  const [showLlmContext, setShowLlmContext] = useState(false);
 
   const update = useMutation(api.documents.update);
   const removeIcon = useMutation(api.documents.removeIcon);
@@ -68,6 +72,10 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
     });
   };
 
+  const toggleLlmContext = () => {
+    setShowLlmContext(!showLlmContext);
+  };
+
   return (
     <div className="group relative pl-12">
       {!!initialData.icon && !preview && (
@@ -103,18 +111,32 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
             </Button>
           </IconPicker>
         )}
-        {!initialData.coverImage && !preview && (
+        {!preview && (
           <Button
-            onClick={coverImage.onOpen}
+            onClick={toggleLlmContext}
             className="text-xs text-muted-foreground"
             variant="outline"
             size="sm"
           >
-            <ImageIcon className="mr-2 h-4 w-4" />
-            Add Cover
+            <MessageSquare className="mr-2 h-4 w-4" />
+            {showLlmContext ? "Hide LLM Context" : (llmContext ? "Show LLM Context" : "Add LLM Context")}
           </Button>
         )}
       </div>
+      {showLlmContext && !preview && (
+        <TextareaAutosize
+          value={llmContext}
+          onChange={(e) => onLlmContextChange(e.target.value)}
+          placeholder="Enter context for the LLM..."
+          className="w-full resize-none rounded-lg dark:border-neutral-600
+           bg-transparent px-3 py-2 text-md border border-neutral-300
+           placeholder:text-muted-foreground focus-visible:outline-none
+           disabled:cursor-not-allowed disabled:opacity-50
+           backdrop-blur-md shadow-md"
+           
+          rows={10}
+        />
+      )}
       {isEditing && !preview ? (
         <TextareaAutosize
           ref={inputRef}
@@ -123,7 +145,8 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
           onKeyDown={onKeyDown}
           value={value}
           onChange={(e) => onInput(e.target.value)}
-          className="resize-none break-words bg-transparent text-5xl font-bold text-[#3F3F3F] outline-none dark:text-[#CFCFCF]"
+          className="resize-none break-words bg-transparent text-5xl 
+           font-bold text-[#3F3F3F] outline-none dark:text-[#CFCFCF]"
         />
       ) : (
         <div
@@ -133,6 +156,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
           {initialData.title}
         </div>
       )}
+
     </div>
   );
 };

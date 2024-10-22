@@ -42,6 +42,7 @@ export const handleHighlightedText = async (
   if (!selectedBlockId) return;
 
   // Get the full document content
+  //TODO: find a more efficient way to do this
   let fullContent = '';
   editor.forEachBlock((block) => {
     fullContent += block.content.map(inline => inline.text).join(' ') + '\n';

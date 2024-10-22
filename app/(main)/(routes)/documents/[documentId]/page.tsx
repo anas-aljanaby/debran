@@ -1,7 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import TextareaAutosize from "react-textarea-autosize";
 
 import { Cover } from "@/components/cover";
 import { Toolbar } from "@/components/toolbar";
@@ -18,6 +20,9 @@ interface DocumentIdPageProps {
 }
 
 const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
+  const [showInput, setShowInput] = useState(false);
+  const [llmContext, setLlmContext] = useState("");
+
   const Editor = useMemo(
     () => dynamic(() => import("@/components/editor"), { ssr: false }),
     [],
@@ -34,6 +39,10 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       id: params.documentId,
       content,
     });
+  };
+
+  const toggleInput = () => {
+    setShowInput(!showInput);
   };
 
   if (document === undefined) {
@@ -60,12 +69,17 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     <div className="pb-40">
       <Cover url={document.coverImage} />
       <div className="mx-auto md:max-w-3xl lg:max-w-4xl">
-        <Toolbar initialData={document} />
+        <Toolbar
+          initialData={document}
+          onLlmContextChange={setLlmContext}
+          llmContext={llmContext}
+        />
         <Editor
           onChange={onChange}
           initialContent={document.content}
           editable={true}
           documentId={params.documentId as Id<"documents">}
+          llmContext={llmContext}
         />
       </div>
     </div>
