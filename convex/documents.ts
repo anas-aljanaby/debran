@@ -379,3 +379,14 @@ function extractTextFromContent(content: any[]): string {
     return '';
   }).filter(text => text.length > 0).join('\n');
 }
+
+export const getDocumentContext = query({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const document = await ctx.db.get(args.documentId);
+    if (!document) {
+      throw new Error("Document not found");
+    }
+    return document.llmContext || "";
+  },
+});

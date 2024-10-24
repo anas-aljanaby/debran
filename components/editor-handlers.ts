@@ -93,20 +93,32 @@ export async function handleContinueWriting(
   editor: BlockNoteEditor,
   currentBlock: PartialBlock,
   userInput: string,
-  context: string
+  context: string,
+  parentContext: string,
 ) {
   if (!currentBlock) return;
   const extractedText = extractTextFromBlock(currentBlock);
-  const combinedText = `Finish the following text, by applying the insturctions.
-If there are no instructions just continue based on the text.
+
+  // Adjust the prompt to incorporate both context and parentContext
+  const combinedText = `Based on the following parent context, determine the task:
+Parent Context: 
+${parentContext}
+
+Now, apply the task to the following text using the current context:
+Current Context: 
+${context}
+
 Instructions: 
 ${userInput}
+
 Text:
 ${extractedText}`;
 
+  // console.log("context\n", context);
+  // console.log("parentContext\n", parentContext);
   console.log('combinedText:', combinedText);
   try {
-    const completion = await getCompletion(combinedText, context);
+    const completion = await getCompletion(combinedText);
     const aiSuggestion: InlineContent<any, any> = {
       type: "text",
       text: completion,
@@ -165,4 +177,5 @@ export function handleSelection(
     });
     setShowHighlightWindow(true);
   }
+
 }

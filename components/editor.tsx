@@ -94,7 +94,7 @@ const Editor = ({ onChange, initialContent, editable, documentId }: EditorProps)
   } = usePromptWindow({
     onSlashMenuSubmit: (input) => {
       if (textWindowBlock) {
-        handleContinueWriting(editor, textWindowBlock, input, context);
+        handleContinueWriting(editor, textWindowBlock, input, currentContext, parentContext);
       }
     },
     onHighlightSubmit: (input) => {
@@ -113,17 +113,23 @@ const Editor = ({ onChange, initialContent, editable, documentId }: EditorProps)
     handleEditorChange(editor, onChange);
   };
 
-  // Add this function to fetch and set the context
-  const fetchAndSetContext = useQuery(api.documents.getParentContent, { documentId });
+  const fetchCurrentDocument = useQuery(api.documents.getById, { documentId });
+  const currentContext = fetchCurrentDocument?.llmContext|| ""; // Assuming context is a field in the document
+
+  const parentDocumentId = fetchCurrentDocument?.parentDocument;
+  const parentContext = parentDocumentId
+    ? useQuery(api.documents.getDocumentContext, { documentId: parentDocumentId })
+    : null;
 
   useEffect(() => {
-    if (fetchAndSetContext) {
-      setContext(fetchAndSetContext);
+    if (parentContext) {
+      setContext(parentContext);
     }
-  }, [fetchAndSetContext]);
+  }, [parentContext]);
 
   return (
     <div>
+      {/* <h1>{parentContext}</h1> */}
       <BlockNoteView
         editable={editable}
         editor={editor}
