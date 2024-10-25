@@ -99,24 +99,34 @@ export async function handleContinueWriting(
   if (!currentBlock) return;
   const extractedText = extractTextFromBlock(currentBlock);
 
-  // Adjust the prompt to incorporate both context and parentContext
-  const combinedText = `Based on the following parent context, determine the task:
-Parent Context: 
-${parentContext}
+  const combinedText = `
+  You are assisting in completing a note with specific context and inherited instructions. Follow these steps to understand the task:
+  
+  1. **Determine the task** based on the provided parent context.
+  2. **Apply the task** to the content in this note, adapting as needed for any new details in the current context or user instructions.
+  3. **Prioritize instructions**: If user instructions conflict with the parent context, follow the user instructions first.
+  
+  ### Parent Context
+  This is the context of the parent note, providing instructions or background that may guide the task:
+  ${parentContext}
+  
+  ### Current Note Context
+  This is the specific context for the current note, which might expand or adjust the task derived from the parent context:
+  ${context}
+  
+  ### User Instructions
+  The user has optionally added these instructions to guide you on what to focus on or complete:
+  ${userInput}
+  
+  ### Current Note Text
+  This is the text currently written in this note. Continue from here, following the above contexts and instructions:
+  ${extractedText}
+  
+  Continue writing, prioritizing the user’s latest instructions if provided, and refer to the parent context as needed for task guidance.
+  `;
+  
 
-Now, apply the task to the following text using the current context:
-Current Context: 
-${context}
-
-Instructions: 
-${userInput}
-
-Text:
-${extractedText}`;
-
-  // console.log("context\n", context);
-  // console.log("parentContext\n", parentContext);
-  console.log('combinedText:', combinedText);
+  console.log("combinedText\n", combinedText);
   try {
     const completion = await getCompletion(combinedText);
     const aiSuggestion: InlineContent<any, any> = {
