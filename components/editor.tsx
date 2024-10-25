@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, KeyboardEvent, useEffect } from "react";
+import { useState, useRef, KeyboardEvent, useEffect, useCallback } from "react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useTheme } from "next-themes";
 import { useEdgeStore } from "@/lib/edgestore";
@@ -44,14 +44,10 @@ const Editor = ({ onChange, initialContent, editable, documentId }: EditorProps)
   const { resolvedTheme } = useTheme();
   const { edgestore } = useEdgeStore();
   const [context, setContext] = useState("");
-  const [showTextWindow, setShowTextWindow] = useState(false);
   const [textWindowBlock, setTextWindowBlock] = useState<PartialBlock | null>(
     null
   );
 
-  // TODO: function to set the context; which will be all the text
-  // from the parent documents of current document
-  
   const [textWindowPosition, setTextWindowPosition] = useState<{
     top: number;
     left: number;
@@ -82,6 +78,29 @@ const Editor = ({ onChange, initialContent, editable, documentId }: EditorProps)
     },
   });
 
+  function extractTextFromContent(content: any[]): string {
+    return content.map(block => {
+      if (block.type === 'paragraph' || block.type === 'heading') {
+        return block.content.map((item: any) => item.text).join(' ');
+      }
+      return '';
+    }).filter(text => text.length > 0).join('\n');
+  }
+  
+  const generateDocumentString = useCallback((siblingDocuments) => {
+    if (!siblingDocuments) return '';
+    
+    return siblingDocuments.map((doc, i) => {
+      // if doc id is the same as the current document, skip
+      if (doc.id === documentId) return '';
+      const docContent = JSON.parse(doc.content);
+      const contentText = extractTextFromContent(docContent);
+      return `Example ${i + 1}:\nDocument Context:\n${doc.llmContext || ''}\nDocument Content:\n${contentText}\n\n`;
+    }).join('');
+  }, []);
+
+  const siblingDocuments = useQuery(api.documents.getDocumentsByParent, { documentId });
+
   const {
     showPromptWindow,
     promptWindowPosition,
@@ -94,7 +113,11 @@ const Editor = ({ onChange, initialContent, editable, documentId }: EditorProps)
   } = usePromptWindow({
     onSlashMenuSubmit: (input) => {
       if (textWindowBlock) {
-        handleContinueWriting(editor, textWindowBlock, input, currentContext, parentContext);
+        const siblingString = generateDocumentString(siblingDocuments);
+        const newContext = `${currentContext}\n\n${input}\n\n${siblingString}`;
+        console.log("string: ", siblingString)
+        console.log(siblingDocuments);
+        handleContinueWriting(editor, textWindowBlock, input, newContext, parentContext, siblingString);
       }
     },
     onHighlightSubmit: (input) => {

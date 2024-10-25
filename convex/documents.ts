@@ -371,6 +371,19 @@ export const getParentContent = query({
   },
 });
 
+export const getDocumentContent = query({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const document = await ctx.db.get(args.documentId);
+    if (!document || !document.content) {
+      return "";
+    }
+
+    const content = JSON.parse(document.content);
+    return extractTextFromContent(content);
+  },
+});
+
 function extractTextFromContent(content: any[]): string {
   return content.map(block => {
     if (block.type === 'paragraph' || block.type === 'heading') {
@@ -388,5 +401,39 @@ export const getDocumentContext = query({
       throw new Error("Document not found");
     }
     return document.llmContext || "";
+  },
+});
+
+export const getDocumentsByParent = query({
+  args: {
+    documentId: v.id("documents"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const userId = identity.subject;
+    const document = await ctx.db.get(args.documentId);
+    if (!document) {
+      throw new Error("Document not found");
+    }
+    if (document.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+    if (!document.parentDocument) {
+      return [];
+    }
+    const parentDocumentId = document.parentDocument;
+    const documents = await ctx.db
+      .query("documents")
+      .withIndex("by_user_parent", (q) =>
+        q.eq("userId", userId).eq("parentDocument", parentDocumentId),
+      )
+      .filter((q) => q.eq(q.field("isArchived"), false))
+      .filter((q) => q.neq(q.field("_id"), args.documentId)) // Exclude the current document
+      .order("desc")
+      .collect();
+    return documents;
   },
 });

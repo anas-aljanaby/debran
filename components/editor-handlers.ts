@@ -95,37 +95,41 @@ export async function handleContinueWriting(
   userInput: string,
   context: string,
   parentContext: string,
+  siblingDocuments: string,
 ) {
   if (!currentBlock) return;
   const extractedText = extractTextFromBlock(currentBlock);
 
   const combinedText = `
-  You are assisting in completing a note with specific context and inherited instructions. Follow these steps to understand the task:
+  You are assisting in writing a note based on layered context, examples from related notes, and specific instructions. Follow these steps to understand the task and produce a cohesive continuation:
   
-  1. **Determine the task** based on the provided parent context.
-  2. **Apply the task** to the content in this note, adapting as needed for any new details in the current context or user instructions.
-  3. **Prioritize instructions**: If user instructions conflict with the parent context, follow the user instructions first.
+  1. **Determine the task**: First, identify the main task or goal based on the parent context.
+  2. **Refer to examples**: Review the provided example documents to see how they are structured and apply any relevant style, structure, or tone to this note.
+  3. **Apply instructions**: Use the user instructions as guidance for the specific section or focus for this continuation. If there’s a conflict, prioritize the latest user instructions.
   
   ### Parent Context
-  This is the context of the parent note, providing instructions or background that may guide the task:
+  This is the context of the parent note, providing general instructions or goals to guide the task:
   ${parentContext}
   
   ### Current Note Context
-  This is the specific context for the current note, which might expand or adjust the task derived from the parent context:
+  This is the specific context for the current note, expanding on or adjusting the task derived from the parent context:
   ${context}
   
+  ### Sibling Document Examples
+  Here are related notes with their contexts and content examples. Use these as references for structure and style:
+  ${siblingDocuments}
+  
   ### User Instructions
-  The user has optionally added these instructions to guide you on what to focus on or complete:
+  The user has optionally provided these instructions for what to focus on or complete in this continuation:
   ${userInput}
   
   ### Current Note Text
-  This is the text currently written in this note. Continue from here, following the above contexts and instructions:
+  This is the text currently written in this note. Continue from here, maintaining coherence with the above contexts, examples, and instructions:
   ${extractedText}
   
-  Continue writing, prioritizing the user’s latest instructions if provided, and refer to the parent context as needed for task guidance.
+  Please continue writing, using the examples to inform the structure and style, while prioritizing the user's latest instructions as guidance.
   `;
   
-
   console.log("combinedText\n", combinedText);
   try {
     const completion = await getCompletion(combinedText);
