@@ -57,10 +57,10 @@ const CustomToolbar: React.FC<CustomToolbarProps> = ({
     <FormattingToolbar>
       <BlockTypeSelect key={"blockTypeSelect"} />
       <Components.FormattingToolbar.Button
-        mainTooltip="Apply Blue Color"
+        mainTooltip="Edit text with AI"
         onClick={onClickPromptButton}
       >
-        Blue
+        AI Edit
       </Components.FormattingToolbar.Button>
       <FileCaptionButton key={"fileCaptionButton"} />
       <FileReplaceButton key={"replaceFileButton"} />

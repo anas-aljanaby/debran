@@ -7,8 +7,8 @@ export async function POST(req: Request) {
   const { context, parentContext, siblingDocuments, userInput, extractedText } = await req.json();
 
   const model = new OpenAI({
-    // modelName: 'gpt-4o',
-    modelName: "gpt-3.5-turbo",
+    modelName: 'gpt-4o',
+    // modelName: "gpt-3.5-turbo",
     temperature: 0.7,
     openAIApiKey: process.env.OPENAI_API_KEY,
   });
