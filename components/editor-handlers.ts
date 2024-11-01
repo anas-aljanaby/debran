@@ -11,28 +11,39 @@ export const handleUpload = async (edgestore: EdgeStore) => {
   };
 };
 
-async function getCompletion(text: string, context: string = ""): Promise<string> {
+// Updated getCompletion function to handle streaming response
+async function getCompletion(
+  prompt: string,
+  onData: (chunk: string) => void
+): Promise<void> {
   try {
     const response = await fetch('/api/llm', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text, context }),
+      body: JSON.stringify({ prompt }),
     });
 
-    if (!response.ok) {
+    if (!response.ok || !response.body) {
       throw new Error('Failed to get completion');
     }
 
-    const data = await response.json();
-    return data.completion;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let done = false;
+    while (!done) {
+      const { value, done: doneReading } = await reader.read();
+      done = doneReading;
+      const chunk = decoder.decode(value);
+      onData(chunk);
+    }
   } catch (error) {
     console.error('Error getting completion:', error);
     throw error;
   }
 }
-
 export const handleHighlightedText = async (
   editor: BlockNoteEditor,
   selectedBlockId: BlockIdentifier | null,
@@ -42,7 +53,6 @@ export const handleHighlightedText = async (
   if (!selectedBlockId) return;
 
   // Get the full document content
-  //TODO: find a more efficient way to do this
   let fullContent = '';
   editor.forEachBlock((block) => {
     fullContent += block.content.map(inline => inline.text).join(' ') + '\n';
@@ -51,38 +61,38 @@ export const handleHighlightedText = async (
   // Prepare the prompt
   const prompt = `Here is the full document content:
 
-  ${fullContent}
-  
-  The following text is highlighted: "${selectedText}"
-  
-  ${userInput ? `Apply these instructions to the highlighted text only: ${userInput}` : 'Provide a synonym or brief rephrase for the highlighted text only, without returning any non highlighted text.'}
-  
-  The replacement should fit naturally in place of the highlighted text, maintaining the original sentence structure and context. Do not introduce new ideas or sentences.`;
-  
+${fullContent}
 
-  console.log("prompt\n", prompt);
+The following text is highlighted: "${selectedText}"
+
+${
+  userInput
+    ? `Apply these instructions to the highlighted text only: ${userInput}`
+    : 'Provide a synonym or brief rephrase for the highlighted text only, without returning any non highlighted text.'
+}
+
+The replacement should fit naturally in place of the highlighted text, maintaining the original sentence structure and context. Do not introduce new ideas or sentences.`;
+
+  let fullResponse = '';
+
   try {
-    // Call your AI service here with the prompt
-    const response = await getCompletion(prompt);
+    // Call getCompletion with the prompt and handle streaming
+    await getCompletion(prompt, (chunk) => {
+      fullResponse += chunk;
 
-    editor.updateBlock(selectedBlockId, {
-      content: editor.getBlock(selectedBlockId)!.content.map(inline => {
-        if (inline.type === 'text' && inline.text === selectedText) {
-          return {
-            ...inline,
-            text: response,
-            styles: { ...inline.styles, backgroundColor: 'default' }
-          };
-        }
-        if (inline.type === 'text' && inline.styles && inline.styles.backgroundColor === 'blue') {
-          return {
-            ...inline,
-            text: inline.text.replace(selectedText, response),
-            styles: { ...inline.styles, backgroundColor: 'default' }
-          };
-        }
-        return inline;
-      }),
+      // Update the block content as data streams in
+      editor.updateBlock(selectedBlockId, {
+        content: editor.getBlock(selectedBlockId)!.content.map(inline => {
+          if (inline.type === 'text' && inline.text === selectedText) {
+            return {
+              ...inline,
+              text: fullResponse,
+              styles: { ...inline.styles, backgroundColor: 'default' },
+            };
+          }
+          return inline;
+        }),
+      });
     });
   } catch (error) {
     console.error('Error in handleHighlightedText:', error);
@@ -95,8 +105,9 @@ async function continueWriting(
   parentContext: string,
   siblingDocuments: string,
   userInput: string,
-  extractedText: string
-): Promise<string> {
+  extractedText: string,
+  onData: (chunk: string) => void,
+): Promise<void> {
   try {
     const response = await fetch('/api/llm', {
       method: 'POST',
@@ -112,13 +123,20 @@ async function continueWriting(
       }),
     });
 
-    if (!response.ok) {
+    if (!response.ok || !response.body) {
       throw new Error('Failed to get completion');
     }
 
-    const data = await response.json();
-    console.log('Prompt:', data.debug.formattedPrompt);
-    return data.completion;
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let done = false;
+
+    while (!done) {
+      const { value, done: doneReading } = await reader.read();
+      done = doneReading;
+      const chunk = decoder.decode(value, { stream: true });
+      onData(chunk);
+    }
   } catch (error) {
     console.error('Error getting completion:', error);
     throw error;
@@ -137,100 +155,36 @@ export async function handleContinueWriting(
 
   const extractedText = extractTextFromBlock(currentBlock);
 
-  try {
-    // Call getCompletion with all required parameters
-    const completion = await continueWriting(
-      context,
-      parentContext,
-      siblingDocuments,
-      userInput,
-      extractedText
-    );
+  let fullText = "";
 
-    const aiSuggestion: InlineContent<any, any> = {
-      type: "text",
-      text: completion,
-      styles: {
-        textColor: "#1F1F1F",
-      },
-    };
+  await continueWriting(
+    context,
+    parentContext,
+    siblingDocuments,
+    userInput,
+    extractedText,
+    (chunk) => {
+      fullText += chunk;
 
-    const currentContent = currentBlock.content as InlineContent<any, any>[];
-    const updatedContent = [...currentContent, aiSuggestion];
+      const aiSuggestion: InlineContent<any, any> = {
+        type: "text",
+        text: fullText,
+        styles: {
+          textColor: "#1F1F1F",
+        },
+      };
 
-    editor.updateBlock(currentBlock, {
-      content: updatedContent,
-    });
-    editor.setTextCursorPosition(currentBlock, "end");
-  } catch (error) {
-    // Error handling is done in getCompletion function
-  }
+      console.log("fullText\n", fullText);
+      const currentContent = currentBlock.content as InlineContent<any, any>[];
+      const updatedContent = [...currentContent, aiSuggestion];
+
+      editor.updateBlock(currentBlock, {
+        content: updatedContent,
+      });
+      editor.setTextCursorPosition(currentBlock, "end");
+    }
+  );
 }
-
-// export async function handleContinueWriting(
-//   editor: BlockNoteEditor,
-//   currentBlock: PartialBlock,
-//   userInput: string,
-//   context: string,
-//   parentContext: string,
-//   siblingDocuments: string,
-// ) {
-//   if (!currentBlock) return;
-//   const extractedText = extractTextFromBlock(currentBlock);
-
-//   const combinedText = `
-//   **Note Continuation Request**
-
-//   You are assisting in writing a note based on layered context, examples, and specific instructions. Do not acknowledge this request with any conversational response. Generate only the text continuation without any phrases like "Certainly" or "Here is your continuation." If information such as names or specific closing phrases is present in the examples or context, include them as appropriate to make the response as natural and complete as possible.
-//   For example if you catch the users name or address or any other info, and you encounter a place where you need to use, 
-//   do not write "Dear [Name]" instead write the name directly.
-
-
-//   ### Context Details
-//   1. **Current Note Context**: "${context}"  
-//       *(This context describes what this specific note is focused on. Please align the continuation with this focus.)*
-     
-//   2. **Parent Note Context**: "${parentContext}"  
-//       *(This note is nested under a parent note that serves as a broader context. Use this if it helps clarify the purpose of the current note or provides additional direction.)*
-      
-//   3. **Sibling Note Examples**:  
-//       ${siblingDocuments}
-//       *(These sibling notes are notes written by the user in response to their respective context, the user has grouped them with 
-//       our current note so they likely contain valueable info about what the user is expecting.)*
-
-//   ### User Instructions
-//   "${userInput}"  
-//   *(The user has provided specific instructions for this completion. Follow these instructions closely, as they pertain to the immediate task.)*
-
-//   ### Current Note Content
-//   "${extractedText}"  
-//   *(This is the content currently written in the note up to this point if any. Continue from here, taking into account the context, user instructions, and any relevant examples.)*
-// `;
-
-//   console.log("combinedText\n", combinedText);
-//   try {
-//     const completion = await getCompletion(combinedText);
-//     const aiSuggestion: InlineContent<any, any> = {
-//       type: "text",
-//       text: completion,
-//       styles: {
-//         textColor: "#[1F1F1F]",
-//       },
-//     };
-
-//     const currentContent = currentBlock.content as InlineContent<any, any>[];
-//     const updatedContent = [...currentContent, aiSuggestion];
-
-//     editor.updateBlock(currentBlock, {
-//       content: updatedContent,
-//     });
-
-//     editor.setTextCursorPosition(currentBlock, "end");
-//   } catch (error) {
-//     // Error handling is done in getCompletion function
-//   }
-// }
-
 export async function handleContinueWritingWrapper(
   editor: BlockNoteEditor,
   currentBlock: PartialBlock | null,

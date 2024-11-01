@@ -1,19 +1,18 @@
-// app/api/llm/route.ts
 import { NextResponse } from 'next/server';
-import { OpenAI } from '@langchain/openai';
+import { ChatOpenAI } from '@langchain/openai';
 import { PromptTemplate } from '@langchain/core/prompts';
 
 export async function POST(req: Request) {
   const { context, parentContext, siblingDocuments, userInput, extractedText } = await req.json();
 
-  const model = new OpenAI({
-    modelName: 'gpt-4o',
-    // modelName: "gpt-3.5-turbo",
+  const model = new ChatOpenAI({
+    // modelName: 'gpt-4o',
+    modelName: "gpt-3.5-turbo",
     temperature: 0.7,
     openAIApiKey: process.env.OPENAI_API_KEY,
+    streaming: true,  // Enable streaming here if supported
   });
 
-  // Define the template with placeholders for each section
   const template = `
     **Note Continuation Request**
 
@@ -62,16 +61,19 @@ export async function POST(req: Request) {
     extractedText,
   });
   
-  console.log('\n=== Formatted Prompt Sent to Model ===\n');
-  console.log(formattedPrompt);
-  console.log('\n====================================\n');
+  const stream = await model.stream(formattedPrompt);
 
-  const response = await model.call(formattedPrompt);
-
-  return NextResponse.json({
-     completion: response,
-     debug : {
-        formattedPrompt
+  const encoder = new TextEncoder();
+  const readableStream = new ReadableStream({
+    async start(controller) {
+      for await (const chunk of stream) {
+        controller.enqueue(encoder.encode(chunk.content));
       }
-    });
+      controller.close();
+    },
+  });
+
+  return new Response(readableStream, {
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
 }
