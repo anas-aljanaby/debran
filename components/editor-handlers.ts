@@ -11,10 +11,14 @@ export const handleUpload = async (edgestore: EdgeStore) => {
   };
 };
 
-// Updated getCompletion function to handle streaming response
+// Updated getCompletion function to handle streaming
 async function getCompletion(
-  prompt: string,
-  onData: (chunk: string) => void
+  context: string,
+  parentContext: string,
+  siblingDocuments: string,
+  userInput: string,
+  extractedText: string,
+  onData: (data: string) => void
 ): Promise<void> {
   try {
     const response = await fetch('/api/llm', {
@@ -22,7 +26,7 @@ async function getCompletion(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ context, parentContext, siblingDocuments, userInput, extractedText }),
     });
 
     if (!response.ok || !response.body) {
@@ -30,20 +34,25 @@ async function getCompletion(
     }
 
     const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
+    const decoder = new TextDecoder('utf-8');
     let done = false;
+
     while (!done) {
-      const { value, done: doneReading } = await reader.read();
-      done = doneReading;
-      const chunk = decoder.decode(value);
-      onData(chunk);
+      const { value, done: readerDone } = await reader.read();
+      done = readerDone;
+      if (value) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const chunk = decoder.decode(value);
+        onData(chunk);
+      }
     }
   } catch (error) {
     console.error('Error getting completion:', error);
     throw error;
   }
 }
+
+// Updated handleHighlightedText function
 export const handleHighlightedText = async (
   editor: BlockNoteEditor,
   selectedBlockId: BlockIdentifier | null,
@@ -52,48 +61,51 @@ export const handleHighlightedText = async (
 ) => {
   if (!selectedBlockId) return;
 
-  // Get the full document content
-  let fullContent = '';
-  editor.forEachBlock((block) => {
-    fullContent += block.content.map(inline => inline.text).join(' ') + '\n';
-  });
+  // Get the selected block
+  const selectedBlock = editor.getBlock(selectedBlockId);
+  if (!selectedBlock) return;
 
-  // Prepare the prompt
-  const prompt = `Here is the full document content:
+  // Get context: content of the selected block
+  const context = selectedBlock.content.map(inline => inline.text).join(' ');
 
-${fullContent}
+  // Set parentContext and siblingDocuments as needed
+  const parentContext = ''; // Update with actual parent context if available
+  const siblingDocuments = ''; // Update with actual sibling documents if available
 
-The following text is highlighted: "${selectedText}"
-
-${
-  userInput
-    ? `Apply these instructions to the highlighted text only: ${userInput}`
-    : 'Provide a synonym or brief rephrase for the highlighted text only, without returning any non highlighted text.'
-}
-
-The replacement should fit naturally in place of the highlighted text, maintaining the original sentence structure and context. Do not introduce new ideas or sentences.`;
-
-  let fullResponse = '';
+  // extractedText is the selectedText
+  const extractedText = selectedText;
 
   try {
-    // Call getCompletion with the prompt and handle streaming
-    await getCompletion(prompt, (chunk) => {
-      fullResponse += chunk;
+    let responseText = '';
 
-      // Update the block content as data streams in
+    // Callback function to handle incoming data
+    const onData = (dataChunk: string) => {
+      responseText += dataChunk;
+
+      // Update the block content with the new responseText
       editor.updateBlock(selectedBlockId, {
-        content: editor.getBlock(selectedBlockId)!.content.map(inline => {
+        content: selectedBlock.content.map(inline => {
           if (inline.type === 'text' && inline.text === selectedText) {
             return {
               ...inline,
-              text: fullResponse,
+              text: responseText,
               styles: { ...inline.styles, backgroundColor: 'default' },
             };
           }
           return inline;
         }),
       });
-    });
+    };
+
+    // Call the AI service with the required parameters and the onData callback
+    await getCompletion(
+      context,
+      parentContext,
+      siblingDocuments,
+      userInput,
+      extractedText,
+      onData
+    );
   } catch (error) {
     console.error('Error in handleHighlightedText:', error);
   }
@@ -185,6 +197,7 @@ export async function handleContinueWriting(
     }
   );
 }
+
 export async function handleContinueWritingWrapper(
   editor: BlockNoteEditor,
   currentBlock: PartialBlock | null,
